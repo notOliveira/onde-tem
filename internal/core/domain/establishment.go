@@ -8,20 +8,19 @@ import (
 )
 
 type Establishment struct {
-	ID       uuid.UUID
-	Name     string
-	Slug     Slug
-	Types    []EstablishmentType
-	Email    string
-	Website  string
-	Timezone string
+	id      uuid.UUID
+	name    string
+	slug    Slug
+	types   []EstablishmentType
+	email   string
+	website string
 
-	Phones   []Phone
-	Location Location
-	Address  Address
+	phones   []Phone
+	location Location
+	address  Address
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	createdAt time.Time
+	updatedAt time.Time
 }
 
 func NewEstablishment(
@@ -65,13 +64,68 @@ func NewEstablishment(
 	now := time.Now()
 
 	return &Establishment{
-		ID:        uuid.New(),
-		Name:      name,
-		Slug:      finalSlug,
-		Types:     types,
-		Location:  location,
-		Address:   address,
-		CreatedAt: now,
-		UpdatedAt: now,
+		id:        uuid.New(),
+		name:      name,
+		slug:      finalSlug,
+		types:     types,
+		location:  location,
+		address:   address,
+		createdAt: now,
+		updatedAt: now,
 	}, nil
+}
+
+func (e *Establishment) ID() uuid.UUID {
+	return e.id
+}
+
+func (e *Establishment) Name() string {
+	return e.name
+}
+
+func (e *Establishment) Slug() Slug {
+	return e.slug
+}
+
+func (e *Establishment) EstablishmentTypes() []EstablishmentType {
+	return append([]EstablishmentType{}, e.types...)
+}
+
+func (e *Establishment) Email() string {
+	return e.email
+}
+
+func (e *Establishment) Website() string {
+	return e.website
+}
+
+func (e *Establishment) Phones() []Phone {
+	return append([]Phone{}, e.phones...)
+}
+
+func (e *Establishment) Location() Location {
+	return e.location
+}
+
+func (e *Establishment) Address() Address {
+	return e.address
+}
+
+func (e *Establishment) CreatedAt() time.Time {
+	return e.createdAt
+}
+
+func (e *Establishment) UpdatedAt() time.Time {
+	return e.updatedAt
+}
+
+func (e *Establishment) UpdateContact(email, website string) {
+	e.email = strings.TrimSpace(email)
+	e.website = strings.TrimSpace(website)
+	e.updatedAt = time.Now()
+}
+
+func (e *Establishment) AddPhone(phone Phone) {
+	e.phones = append(e.phones, phone)
+	e.updatedAt = time.Now()
 }

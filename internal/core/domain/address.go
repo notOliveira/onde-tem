@@ -1,18 +1,18 @@
 package domain
 
 type Address struct {
-	Street   string
-	Number   string
-	District string
-	City     string
-	State    string
-	Country  string
-	ZipCode  string
+	street   string
+	number   string
+	district string
+	city     string
+	state    string
+	country  string
+	zipCode  string
 }
 
 func (a Address) IsValid() bool {
-	return a.Street != "" &&
-		a.City != "" &&
-		a.State != "" &&
-		a.Country != ""
+	return a.street != "" &&
+		a.city != "" &&
+		a.state != "" &&
+		a.country != ""
 }

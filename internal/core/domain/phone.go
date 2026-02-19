@@ -1,11 +1,11 @@
 package domain
 
 type Phone struct {
-	CountryCode string
-	Number      string
-	Label       string
+	countryCode string
+	number      string
+	label       string
 }
 
 func (p Phone) IsValid() bool {
-	return p.Number != ""
+	return p.number != ""
 }

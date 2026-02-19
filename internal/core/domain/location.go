@@ -1,15 +1,15 @@
 package domain
 
 type Location struct {
-	Lat float64
-	Lon float64
+	lat float64
+	lon float64
 }
 
 func (l Location) IsValid() bool {
-	if l.Lat < -90 || l.Lat > 90 {
+	if l.lat < -90 || l.lat > 90 {
 		return false
 	}
-	if l.Lon < -180 || l.Lon > 180 {
+	if l.lon < -180 || l.lon > 180 {
 		return false
 	}
 	return true
