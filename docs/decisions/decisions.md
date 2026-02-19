@@ -40,4 +40,4 @@
 
 - ci: CI/CD changes.
 
-revert: reverting to a previous commit/state.
+- revert: reverting to a previous commit/state.
