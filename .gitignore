@@ -1,0 +1,12 @@
+bin/
+dist/
+*.exe
+*.test
+*.out
+.env
+.env.dev
+.env.prd
+.env.hml
+.idea/
+.vscode/
+notebook.md
