@@ -5,10 +5,12 @@ on:
     branches:
       - dev
       - hml
+      - main
   pull_request:
     branches:
       - dev
       - hml
+      - main
 
 jobs:
   build:
