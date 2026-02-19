@@ -8,3 +8,8 @@ System to find information about establishments, enriched with collaborative inf
 # Stop
 > Ctrl + C
 ```
+
+## Autoformat code
+```bash
+> gofmt -w .
+```
