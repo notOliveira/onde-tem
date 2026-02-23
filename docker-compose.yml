@@ -24,6 +24,20 @@ services:
       - "8080:8080"
     networks:
       - onde-tem-network
+  
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    networks:
+      - onde-tem-network
+    entrypoint: [
+      "migrate",
+      "-path=/migrations",
+      "-database=postgres://postgres:admin@db:5432/onde_tem?sslmode=disable"
+    ]
+    depends_on:
+      - db
 
 volumes:
   postgres_data:
