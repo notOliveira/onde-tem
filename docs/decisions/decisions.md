@@ -38,6 +38,8 @@
 
 - perf: performance improvements.
 
+- db: database related stuff.
+
 - ci: CI/CD changes.
 
 - revert: reverting to a previous commit/state.
