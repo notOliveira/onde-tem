@@ -11,6 +11,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - onde-tem-network
 
   api:
     build: .
@@ -22,6 +24,12 @@ services:
       - .env
     ports:
       - "8080:8080"
+    networks:
+      - onde-tem-network
 
 volumes:
   postgres_data:
+
+networks:
+  onde-tem-network:
+    driver: bridge
