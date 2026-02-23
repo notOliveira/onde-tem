@@ -8,17 +8,16 @@ import (
 )
 
 type Establishment struct {
-	id      uuid.UUID
-	name    string
-	slug    Slug
-	types   []EstablishmentType
-	email   string
-	website string
-
-	phones   []Phone
-	location Location
-	address  Address
-
+	id        uuid.UUID
+	name      string
+	slug      Slug
+	types     []EstablishmentType
+	email     string
+	website   string
+	phones    []Phone
+	location  Location
+	address   Address
+	timezone  string
 	createdAt time.Time
 	updatedAt time.Time
 }
@@ -111,6 +110,10 @@ func (e *Establishment) Address() Address {
 	return e.address
 }
 
+func (e *Establishment) Timezone() string {
+	return e.timezone
+}
+
 func (e *Establishment) CreatedAt() time.Time {
 	return e.createdAt
 }
@@ -127,5 +130,10 @@ func (e *Establishment) UpdateContact(email, website string) {
 
 func (e *Establishment) AddPhone(phone Phone) {
 	e.phones = append(e.phones, phone)
+	e.updatedAt = time.Now()
+}
+
+func (e *Establishment) UpdateTimezone(timezone string) {
+	e.timezone = timezone
 	e.updatedAt = time.Now()
 }
