@@ -13,3 +13,13 @@ System to find information about establishments, enriched with collaborative inf
 ```bash
 > gofmt -w .
 ```
+
+## Access Postgres Database using Docker
+```
+docker exec -it onde-tem-db psql -U <USER> -d <DATABASE>
+```
+
+## Removing containers
+```
+docker compose down -v
+```
