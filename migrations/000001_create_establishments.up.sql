@@ -6,14 +6,18 @@ CREATE TABLE establishments (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     types TEXT[] NOT NULL,
-    email TEXT,
-    website TEXT,
-    phones JSONB,
+
+    email TEXT NOT NULL DEFAULT '',
+    website TEXT NOT NULL DEFAULT '',
+    timezone TEXT NOT NULL DEFAULT '',
+
+    phones JSONB NOT NULL DEFAULT '[]'::jsonb,
+    address JSONB NOT NULL DEFAULT '{}'::jsonb,
+
     location GEOGRAPHY(Point, 4326) NOT NULL,
-    address JSONB,
-    timezone TEXT,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE INDEX idx_establishments_slug ON establishments(slug);
