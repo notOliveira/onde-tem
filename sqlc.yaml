@@ -2,9 +2,9 @@ version: "2"
 sql:
   - engine: "postgresql"
     schema: "migrations"
-    queries: "sql"
+    queries: "internal/adapters/outbound/persistence/postgres/queries"
     gen:
       go:
-        package: "db"
-        out: "internal/adapters/outbound/persistence/postgres/db"
+        package: "postgresdb"
+        out: "internal/adapters/outbound/persistence/postgres/sqlc"
         sql_package: "pgx/v5"

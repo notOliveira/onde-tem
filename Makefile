@@ -64,7 +64,7 @@ test:
 	go test ./...
 
 fmt:
-	go fmt -W .
+	gofmt -w .
 
 vet:
 	go vet ./...
