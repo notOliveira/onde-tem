@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -11,6 +9,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - onde-tem-network
 
   api:
     build: .
@@ -22,6 +22,26 @@ services:
       - .env
     ports:
       - "8080:8080"
+    networks:
+      - onde-tem-network
+  
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    networks:
+      - onde-tem-network
+    entrypoint: [
+      "migrate",
+      "-path=/migrations",
+      "-database=postgres://postgres:admin@db:5432/onde_tem?sslmode=disable"
+    ]
+    depends_on:
+      - db
 
 volumes:
   postgres_data:
+
+networks:
+  onde-tem-network:
+    driver: bridge
