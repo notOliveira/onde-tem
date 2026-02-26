@@ -58,3 +58,7 @@ func removeAccents(input string) string {
 	}
 	return norm.NFC.String(b.String())
 }
+
+func (s Slug) String() string {
+	return string(s)
+}

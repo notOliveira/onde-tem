@@ -137,3 +137,27 @@ func (e *Establishment) UpdateTimezone(timezone string) {
 	e.timezone = timezone
 	e.updatedAt = time.Now()
 }
+
+func (e *Establishment) Types() []EstablishmentType {
+	return append([]EstablishmentType{}, e.types...)
+}
+
+func (e *Establishment) SetTypes(types []EstablishmentType) {
+	e.types = types
+	e.updatedAt = time.Now()
+}
+
+func RehydrateEstablishment(
+	id uuid.UUID,
+	name string,
+	slug Slug,
+	types []EstablishmentType,
+	location Location,
+	address Address,
+	phones []Phone,
+	email string,
+	website string,
+	timezone string,
+	createdAt time.Time,
+	updatedAt time.Time,
+) *Establishment
