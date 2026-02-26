@@ -124,6 +124,7 @@ Access the running PostgreSQL container:
 docker compose exec db psql -U <user> -d <database>
 # Or
 make db-shell user=<user> db=<database>
+# Default: make db-shell user=postgres db=onde_tem
 ```
 
 Make sure the database container is running before executing this command.
@@ -174,7 +175,17 @@ docker compose run migrate force <version>
 make migrate-force v=<version>
 ```
 
----
+Making sure all migrations are applied
+```bash
+make db-shell user=postgres db=onde_tem
+db=#SELECT * FROM schema_migrations;
+ version | dirty 
+---------+-------
+       1 | f
+(1 row)
+
+# If the db-shell shows up this, you're ok
+```
 
 ## Production build
 
