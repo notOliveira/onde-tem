@@ -13,26 +13,54 @@ INSERT INTO establishments (
     created_at,
     updated_at
 ) VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7,
-    $8,
-    $9,
-    ST_SetSRID(ST_MakePoint($10, $11), 4326),
-    $12,
-    $13
+    @id,
+    @name,
+    @slug,
+    @types,
+    @email,
+    @website,
+    @timezone,
+    @phones,
+    @address,
+    ST_SetSRID(ST_MakePoint(@lon, @lat), 4326),
+    @created_at,
+    @updated_at
 );
 
 -- name: GetEstablishmentByID :one
-SELECT * FROM establishments
+SELECT
+    id,
+    name,
+    slug,
+    types,
+    email,
+    website,
+    timezone,
+    phones,
+    address,
+    ST_Y(location) AS lat,
+    ST_X(location) AS lon,
+    created_at,
+    updated_at
+FROM establishments
 WHERE id = $1;
 
 -- name: GetEstablishmentBySlug :one
-SELECT * FROM establishments
+SELECT
+    id,
+    name,
+    slug,
+    types,
+    email,
+    website,
+    timezone,
+    phones,
+    address,
+    CAST(ST_Y(location) AS double precision) AS lat,
+    CAST(ST_X(location) AS double precision) AS lon,
+    created_at,
+    updated_at
+FROM establishments
 WHERE slug = $1;
 
 -- name: DeleteEstablishment :exec

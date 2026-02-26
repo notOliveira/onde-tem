@@ -3,12 +3,13 @@
 //   sqlc v1.30.0
 // source: establishments.sql
 
-package postgresdb
+package sqlc
 
 import (
 	"context"
+	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createEstablishment = `-- name: CreateEstablishment :exec
@@ -42,19 +43,19 @@ INSERT INTO establishments (
 `
 
 type CreateEstablishmentParams struct {
-	ID            pgtype.UUID
-	Name          string
-	Slug          string
-	Types         []string
-	Email         pgtype.Text
-	Website       pgtype.Text
-	Timezone      pgtype.Text
-	Phones        []byte
-	Address       []byte
-	StMakepoint   interface{}
-	StMakepoint_2 interface{}
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	ID        uuid.UUID
+	Name      string
+	Slug      string
+	Types     []string
+	Email     string
+	Website   string
+	Timezone  string
+	Phones    []byte
+	Address   []byte
+	Lon       interface{}
+	Lat       interface{}
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishmentParams) error {
@@ -68,8 +69,8 @@ func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishme
 		arg.Timezone,
 		arg.Phones,
 		arg.Address,
-		arg.StMakepoint,
-		arg.StMakepoint_2,
+		arg.Lon,
+		arg.Lat,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -81,19 +82,49 @@ DELETE FROM establishments
 WHERE id = $1
 `
 
-func (q *Queries) DeleteEstablishment(ctx context.Context, id pgtype.UUID) error {
+func (q *Queries) DeleteEstablishment(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteEstablishment, id)
 	return err
 }
 
 const getEstablishmentByID = `-- name: GetEstablishmentByID :one
-SELECT id, name, slug, types, email, website, phones, location, address, timezone, created_at, updated_at FROM establishments
+SELECT
+    id,
+    name,
+    slug,
+    types,
+    email,
+    website,
+    timezone,
+    phones,
+    address,
+    ST_Y(location) AS lat,
+    ST_X(location) AS lon,
+    created_at,
+    updated_at
+FROM establishments
 WHERE id = $1
 `
 
-func (q *Queries) GetEstablishmentByID(ctx context.Context, id pgtype.UUID) (Establishment, error) {
+type GetEstablishmentByIDRow struct {
+	ID        uuid.UUID
+	Name      string
+	Slug      string
+	Types     []string
+	Email     string
+	Website   string
+	Timezone  string
+	Phones    []byte
+	Address   []byte
+	Lat       interface{}
+	Lon       interface{}
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetEstablishmentByID(ctx context.Context, id uuid.UUID) (GetEstablishmentByIDRow, error) {
 	row := q.db.QueryRow(ctx, getEstablishmentByID, id)
-	var i Establishment
+	var i GetEstablishmentByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -101,10 +132,11 @@ func (q *Queries) GetEstablishmentByID(ctx context.Context, id pgtype.UUID) (Est
 		&i.Types,
 		&i.Email,
 		&i.Website,
-		&i.Phones,
-		&i.Location,
-		&i.Address,
 		&i.Timezone,
+		&i.Phones,
+		&i.Address,
+		&i.Lat,
+		&i.Lon,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -112,13 +144,43 @@ func (q *Queries) GetEstablishmentByID(ctx context.Context, id pgtype.UUID) (Est
 }
 
 const getEstablishmentBySlug = `-- name: GetEstablishmentBySlug :one
-SELECT id, name, slug, types, email, website, phones, location, address, timezone, created_at, updated_at FROM establishments
+SELECT
+    id,
+    name,
+    slug,
+    types,
+    email,
+    website,
+    timezone,
+    phones,
+    address,
+    CAST(ST_Y(location) AS double precision) AS lat,
+    CAST(ST_X(location) AS double precision) AS lon,
+    created_at,
+    updated_at
+FROM establishments
 WHERE slug = $1
 `
 
-func (q *Queries) GetEstablishmentBySlug(ctx context.Context, slug string) (Establishment, error) {
+type GetEstablishmentBySlugRow struct {
+	ID        uuid.UUID
+	Name      string
+	Slug      string
+	Types     []string
+	Email     string
+	Website   string
+	Timezone  string
+	Phones    []byte
+	Address   []byte
+	Lat       float64
+	Lon       float64
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetEstablishmentBySlug(ctx context.Context, slug string) (GetEstablishmentBySlugRow, error) {
 	row := q.db.QueryRow(ctx, getEstablishmentBySlug, slug)
-	var i Establishment
+	var i GetEstablishmentBySlugRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -126,10 +188,11 @@ func (q *Queries) GetEstablishmentBySlug(ctx context.Context, slug string) (Esta
 		&i.Types,
 		&i.Email,
 		&i.Website,
-		&i.Phones,
-		&i.Location,
-		&i.Address,
 		&i.Timezone,
+		&i.Phones,
+		&i.Address,
+		&i.Lat,
+		&i.Lon,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

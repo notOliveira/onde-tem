@@ -2,23 +2,25 @@
 // versions:
 //   sqlc v1.30.0
 
-package postgresdb
+package sqlc
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type Establishment struct {
-	ID        pgtype.UUID
+	ID        uuid.UUID
 	Name      string
 	Slug      string
 	Types     []string
-	Email     pgtype.Text
-	Website   pgtype.Text
+	Email     string
+	Website   string
+	Timezone  string
 	Phones    []byte
-	Location  interface{}
 	Address   []byte
-	Timezone  pgtype.Text
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	Location  interface{}
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
