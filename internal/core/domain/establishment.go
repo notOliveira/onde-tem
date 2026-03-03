@@ -3,12 +3,10 @@ package domain
 import (
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Establishment struct {
-	id        uuid.UUID
+	id        EstablishmentID
 	name      string
 	slug      Slug
 	types     []EstablishmentType
@@ -23,6 +21,7 @@ type Establishment struct {
 }
 
 func NewEstablishment(
+	id EstablishmentID,
 	name string,
 	rawSlug string,
 	types []EstablishmentType,
@@ -63,7 +62,7 @@ func NewEstablishment(
 	now := time.Now()
 
 	return &Establishment{
-		id:        uuid.New(),
+		id:        id,
 		name:      name,
 		slug:      finalSlug,
 		types:     types,
@@ -74,7 +73,7 @@ func NewEstablishment(
 	}, nil
 }
 
-func (e *Establishment) ID() uuid.UUID {
+func (e *Establishment) ID() EstablishmentID {
 	return e.id
 }
 

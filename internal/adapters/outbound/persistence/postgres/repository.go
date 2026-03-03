@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"errors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"encoding/json"
-	"github.com/google/uuid"
 	"github.com/notOliveira/onde-tem/internal/adapters/outbound/persistence/postgres/sqlc"
 	"github.com/notOliveira/onde-tem/internal/core/domain"
 	"github.com/notOliveira/onde-tem/internal/core/ports"
@@ -26,6 +26,18 @@ func (r *establishmentRepository) Create(
 	e *domain.Establishment,
 ) error {
 
+	return r.mapToDomain(ctx, e)
+}
+
+func (r *establishmentRepository) mapToDomain(
+	ctx context.Context,
+	e *domain.Establishment,
+) error {
+	uid, err := uuid.Parse(e.ID().String())
+	if err != nil {
+		return err
+	}
+
 	phonesJSON, err := json.Marshal(e.Phones())
 	if err != nil {
 		return err
@@ -42,7 +54,7 @@ func (r *establishmentRepository) Create(
 	}
 
 	params := sqlc.CreateEstablishmentParams{
-		ID:        e.ID(),
+		ID:        uid,
 		Name:      e.Name(),
 		Slug:      e.Slug().String(),
 		Types:     types,
@@ -69,14 +81,14 @@ func (r *establishmentRepository) Update(
 
 func (r *establishmentRepository) Delete(
 	ctx context.Context,
-	id uuid.UUID,
+	id domain.EstablishmentID,
 ) error {
 	return nil
 }
 
 func (r *establishmentRepository) GetByID(
 	ctx context.Context,
-	id uuid.UUID,
+	id domain.EstablishmentID,
 ) (*domain.Establishment, error) {
 	return nil, nil
 }
@@ -91,6 +103,11 @@ func (r *establishmentRepository) GetBySlug(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrEstablishmentNotFound
 		}
+		return nil, err
+	}
+
+	id, err := domain.NewEstablishmentID(row.ID.String())
+	if err != nil {
 		return nil, err
 	}
 
@@ -115,6 +132,7 @@ func (r *establishmentRepository) GetBySlug(
 	}
 
 	est, err := domain.NewEstablishment(
+		id,
 		row.Name,
 		row.Slug,
 		types,
