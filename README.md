@@ -6,6 +6,11 @@ System to find information about establishments, enriched with collaborative inf
 
 ## Terminal commands
 
+Reset all application & run migrations (Recommended for first-time run)
+```bash
+make reset-all
+```
+
 Build the images and start the containers:
 ```bash
 docker compose up --build
@@ -119,12 +124,14 @@ make tidy
 
 ## Database commands
 
+### Important: Database credentials are defined in the .env file. You can check the [env example](.env.example) file as a reference.
+
 Access the running PostgreSQL container:
 ```bash
 docker compose exec db psql -U <user> -d <database>
 # Or
-make db-shell user=<user> db=<database>
-# Default: make db-shell user=postgres db=onde_tem
+make db-shell
+
 ```
 
 Make sure the database container is running before executing this command.
@@ -177,14 +184,14 @@ make migrate-force v=<version>
 
 Making sure all migrations are applied
 ```bash
-make db-shell user=postgres db=onde_tem
-db=#SELECT * FROM schema_migrations;
+make db-shell
+db=# SELECT * FROM schema_migrations;
  version | dirty 
 ---------+-------
        1 | f
 (1 row)
 
-# If the db-shell shows up this, you're ok
+# If the shell shows you this, you're ok
 ```
 
 ## Production build

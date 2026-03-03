@@ -31,10 +31,12 @@ services:
       - ./migrations:/migrations
     networks:
       - onde-tem-network
+    env_file:
+      - .env
     entrypoint: [
       "migrate",
       "-path=/migrations",
-      "-database=postgres://postgres:admin@db:5432/onde_tem?sslmode=disable"
+      "-database=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
     ]
     depends_on:
       - db

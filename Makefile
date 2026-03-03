@@ -1,9 +1,17 @@
+include .env
+export
+
 APP_NAME=onde-tem
-DB_URL=postgres://postgres:admin@db:5432/onde_tem?sslmode=disable
+DB_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}
 
 # =========================
 # Docker
 # =========================
+
+reset-all:
+	docker compose down -v --rmi all --remove-orphans
+	docker compose build
+	docker compose run migrate up
 
 up:
 	docker compose up -d
@@ -83,7 +91,7 @@ tidy:
 # =========================
 
 db-shell:
-	docker compose exec db psql -U $(user) -d $(db)
+	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME}
 
 # =========================
 # Production build
