@@ -48,8 +48,8 @@ func (r *establishmentRepository) mapToDomain(
 		return err
 	}
 
-	types := make([]string, len(e.Types()))
-	for i, t := range e.Types() {
+	types := make([]string, len(e.EstablishmentTypes()))
+	for i, t := range e.EstablishmentTypes() {
 		types[i] = t.String()
 	}
 

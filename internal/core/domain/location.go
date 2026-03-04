@@ -1,5 +1,6 @@
 package domain
 
+// Location represents the geographical coordinates (latitude and longitude) of an establishment.
 type Location struct {
 	lat float64
 	lon float64

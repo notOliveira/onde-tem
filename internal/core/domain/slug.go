@@ -15,8 +15,11 @@ var (
 
 var slugRegex = regexp.MustCompile(`^[a-z0-9-]+$`)
 
+// Slug represents a custom URL-friendly identifier for an establishment, typically derived from its name.
 type Slug string
 
+// NewSlug validates the input string and returns a Slug if it's valid, or an error if it's not.
+// The slug must be non-empty, contain only lowercase letters, numbers, and hyphens, and cannot have leading or trailing hyphens.
 func NewSlug(value string) (Slug, error) {
 	value = strings.TrimSpace(value)
 
