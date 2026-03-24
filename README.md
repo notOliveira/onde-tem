@@ -6,7 +6,7 @@ System to find information about establishments, enriched with collaborative inf
 
 ## Terminal commands
 
-Reset all application & run migrations (Recommended for first-time run)
+Reset all application & run migrations (Recommended for first-time run or if you're lost)
 ```bash
 make reset-all
 ```

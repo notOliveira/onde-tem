@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"errors"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"encoding/json"
@@ -17,6 +16,8 @@ type establishmentRepository struct {
 	q *sqlc.Queries
 }
 
+var _ ports.EstablishmentRepository = (*establishmentRepository)(nil)
+
 func NewEstablishmentRepository(q *sqlc.Queries) ports.EstablishmentRepository {
 	return &establishmentRepository{q: q}
 }
@@ -26,26 +27,26 @@ func (r *establishmentRepository) Create(
 	e *domain.Establishment,
 ) error {
 
-	return r.mapToDomain(ctx, e)
-}
-
-func (r *establishmentRepository) mapToDomain(
-	ctx context.Context,
-	e *domain.Establishment,
-) error {
-	uid, err := uuid.Parse(e.ID().String())
+	params, err := r.toCreateParams(e)
 	if err != nil {
 		return err
 	}
 
+	return r.q.CreateEstablishment(ctx, params)
+}
+
+func (r *establishmentRepository) toCreateParams(
+	e *domain.Establishment,
+) (sqlc.CreateEstablishmentParams, error) {
+
 	phonesJSON, err := json.Marshal(e.Phones())
 	if err != nil {
-		return err
+		return sqlc.CreateEstablishmentParams{}, err
 	}
 
 	addressJSON, err := json.Marshal(e.Address())
 	if err != nil {
-		return err
+		return sqlc.CreateEstablishmentParams{}, err
 	}
 
 	types := make([]string, len(e.EstablishmentTypes()))
@@ -53,8 +54,7 @@ func (r *establishmentRepository) mapToDomain(
 		types[i] = t.String()
 	}
 
-	params := sqlc.CreateEstablishmentParams{
-		ID:        uid,
+	return sqlc.CreateEstablishmentParams{
 		Name:      e.Name(),
 		Slug:      e.Slug().String(),
 		Types:     types,
@@ -67,9 +67,7 @@ func (r *establishmentRepository) mapToDomain(
 		Lon:       e.Location().Lon(),
 		CreatedAt: e.CreatedAt(),
 		UpdatedAt: e.UpdatedAt(),
-	}
-
-	return r.q.CreateEstablishment(ctx, params)
+	}, nil
 }
 
 func (r *establishmentRepository) Update(

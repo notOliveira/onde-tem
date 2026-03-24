@@ -6,6 +6,7 @@ var ErrInvalidEstablishmentID = errors.New("invalid establishment id")
 
 type EstablishmentID string
 
+// TODO: Remover essa função
 func NewEstablishmentID(value string) (EstablishmentID, error) {
 	if value == "" {
 		return "", ErrInvalidEstablishmentID
