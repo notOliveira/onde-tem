@@ -40,6 +40,15 @@ services:
     ]
     depends_on:
       - db
+  
+  valkey:
+    image: valkey/valkey:latest
+    container_name: onde-tem-cache
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - onde-tem-network
 
 volumes:
   postgres_data:
