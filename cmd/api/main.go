@@ -26,7 +26,6 @@ func main() {
 
 	database.Open(&log)
 
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Onde Tem API 🚀 - Docker up!")
 	})
