@@ -9,9 +9,7 @@ import (
 	"github.com/notOliveira/onde-tem/internal/infra/logger"
 )
 
-var DB *pgx.Conn
-
-func Open(log *logger.Logger) {
+func NewConnection(log *logger.Logger) (*pgx.Conn, error) {
 
 	connectionString := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
@@ -23,32 +21,20 @@ func Open(log *logger.Logger) {
 		os.Getenv("DB_SSLMODE"),
 	)
 
-	var err error
-
-	DB, err = pgx.Connect(context.Background(), connectionString)
+	conn, err := pgx.Connect(context.Background(), connectionString)
 	if err != nil {
 		log.Errorf("Unable to connect to database: %v", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	log.Infof("Database connected")
 
-	err = DB.Ping(context.Background())
-	if err != nil {
+	if err := conn.Ping(context.Background()); err != nil {
 		log.Errorf("Database ping failed: %v", err)
-		os.Exit(1)
-	} else {
-		log.Infof("Database ping successful")
+		return nil, err
 	}
-}
 
-func Close() {
-	if DB != nil {
-		err := DB.Close(context.Background())
-		if err != nil {
-			fmt.Printf("Error closing database connection: %v\n", err)
-		} else {
-			fmt.Println("Database connection closed")
-		}
-	}
+	log.Infof("Database ping successful")
+
+	return conn, nil
 }
