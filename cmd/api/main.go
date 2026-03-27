@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/notOliveira/onde-tem/internal/adapters/outbound/cache"
+	"github.com/notOliveira/onde-tem/internal/core/usecase"
 	"github.com/notOliveira/onde-tem/internal/infra/config"
 	"github.com/notOliveira/onde-tem/internal/infra/database"
 )
@@ -26,20 +28,18 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	cacheClient := cache.NewValkeyClient("valkey:6379")
+	host := os.Getenv("VALKEY_HOST")
+	port := os.Getenv("VALKEY_PORT")
+	addr := fmt.Sprintf("%s:%s", host, port)
 
-	ctx := context.Background()
+	cacheClient := cache.NewValkeyClient(addr)
 
-	err = cacheClient.Set(ctx, "teste", "ok", 0)
-	if err != nil {
-		log.Errorf("cache error: %v", err)
-	}
-
-	val, _ := cacheClient.Get(ctx, "teste")
-	log.Infof("cache value: %s", val)
+	// USECASE
+	healthUC := usecase.NewHealthUseCase(cacheClient)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Onde Tem API 🚀 com cache! Variável em cache: %s", val)
+		result := healthUC.Execute(r.Context())
+		fmt.Fprintln(w, result)
 	})
 
 	log.Info("Server running on :8080")
