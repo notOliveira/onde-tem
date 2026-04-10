@@ -23,7 +23,6 @@ type Establishment struct {
 
 // NewEstablishment creates a new Establishment instance with the provided parameters.
 func NewEstablishment(
-	id EstablishmentID,
 	name string,
 	rawSlug string,
 	types []EstablishmentType,
@@ -74,7 +73,7 @@ func NewEstablishment(
 	now := time.Now()
 
 	return &Establishment{
-		id:        id,
+		id:        "",
 		name:      name,
 		slug:      finalSlug,
 		types:     types,
@@ -216,6 +215,11 @@ func (e *Establishment) UpdateTimezone(timezone string) error {
 	e.timezone = timezone
 	e.updatedAt = time.Now()
 	return nil
+}
+
+// SetID sets the unique identifier of the establishment. This method is intended to be used by the repository when persisting a new establishment.
+func (e *Establishment) SetID(id EstablishmentID) {
+	e.id = id
 }
 
 // SetTypes updates the types of the establishment. The establishment must have at least one type.

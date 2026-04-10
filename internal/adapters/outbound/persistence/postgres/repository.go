@@ -32,7 +32,19 @@ func (r *establishmentRepository) Create(
 		return err
 	}
 
-	return r.q.CreateEstablishment(ctx, params)
+	id, err := r.q.CreateEstablishment(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	parsedID, err := domain.ParseEstablishmentID(id.String())
+	if err != nil {
+		return err
+	}
+
+	e.SetID(parsedID)
+
+	return nil
 }
 
 func (r *establishmentRepository) toCreateParams(
@@ -104,11 +116,6 @@ func (r *establishmentRepository) GetBySlug(
 		return nil, err
 	}
 
-	id, err := domain.NewEstablishmentID(row.ID.String())
-	if err != nil {
-		return nil, err
-	}
-
 	var phones []domain.Phone
 	if err := json.Unmarshal(row.Phones, &phones); err != nil {
 		return nil, err
@@ -130,7 +137,6 @@ func (r *establishmentRepository) GetBySlug(
 	}
 
 	est, err := domain.NewEstablishment(
-		id,
 		row.Name,
 		row.Slug,
 		types,

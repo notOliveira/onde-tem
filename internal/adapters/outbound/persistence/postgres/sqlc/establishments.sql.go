@@ -12,9 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const createEstablishment = `-- name: CreateEstablishment :exec
+const createEstablishment = `-- name: CreateEstablishment :one
 INSERT INTO establishments (
-    id,
     name,
     slug,
     types,
@@ -35,15 +34,14 @@ INSERT INTO establishments (
     $6,
     $7,
     $8,
-    $9,
-    ST_SetSRID(ST_MakePoint($10, $11), 4326),
-    $12,
-    $13
+    ST_SetSRID(ST_MakePoint($9, $10), 4326),
+    $11,
+    $12
 )
+RETURNING id
 `
 
 type CreateEstablishmentParams struct {
-	ID        uuid.UUID
 	Name      string
 	Slug      string
 	Types     []string
@@ -58,9 +56,8 @@ type CreateEstablishmentParams struct {
 	UpdatedAt time.Time
 }
 
-func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishmentParams) error {
-	_, err := q.db.Exec(ctx, createEstablishment,
-		arg.ID,
+func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishmentParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createEstablishment,
 		arg.Name,
 		arg.Slug,
 		arg.Types,
@@ -74,7 +71,9 @@ func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishme
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
-	return err
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteEstablishment = `-- name: DeleteEstablishment :exec
