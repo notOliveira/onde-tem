@@ -20,6 +20,11 @@ make up-build
 Ctrl + C
 ```
 
+You can sanity check the system! (the Docker containers may be running. If not, it will fail)
+```bash
+make sanity
+```
+
 Start containers (without rebuild):
 ```bash
 docker compose up -d
@@ -92,20 +97,6 @@ gofmt -w .
 make fmt
 ```
 
-Run go vet:
-```bash
-go vet ./...
-# Or
-make vet
-```
-
-Run linter:
-```bash
-golangci-lint run
-# Or
-make lint
-```
-
 Generate SQLC files:
 ```bash
 sqlc generate
@@ -118,6 +109,20 @@ Tidy go modules:
 go mod tidy
 # Or
 make tidy
+```
+
+Run go vet:
+```bash
+go vet ./...
+# Or
+make vet
+```
+
+Run linter:
+```bash
+golangci-lint run
+# Or
+make lint
 ```
 
 ---
