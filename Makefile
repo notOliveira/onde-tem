@@ -54,6 +54,7 @@ reset-all:
 	docker compose down -v --rmi all --remove-orphans
 	docker compose build
 	docker compose run migrate up
+	sqlc generate
 
 up:
 	docker compose up -d
