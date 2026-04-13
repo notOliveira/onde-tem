@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,12 +20,12 @@ func main() {
 		return
 	}
 
-	conn, err := database.NewConnection(log)
+	connPool, err := database.NewConnection(log)
 	if err != nil {
 		log.Errorf("failed to connect db: %v", err)
 		return
 	}
-	defer conn.Close(context.Background())
+	defer connPool.Close()
 
 	host := os.Getenv("VALKEY_HOST")
 	port := os.Getenv("VALKEY_PORT")

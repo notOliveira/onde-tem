@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/notOliveira/onde-tem/internal/infra/logger"
 )
 
-func NewConnection(log *logger.Logger) (*pgx.Conn, error) {
+func NewConnection(log *logger.Logger) (*pgxpool.Pool, error) {
 
 	connectionString := fmt.Sprintf(
 		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
@@ -21,7 +21,7 @@ func NewConnection(log *logger.Logger) (*pgx.Conn, error) {
 		os.Getenv("DB_SSLMODE"),
 	)
 
-	conn, err := pgx.Connect(context.Background(), connectionString)
+	pool, err := pgxpool.New(context.Background(), connectionString)
 	if err != nil {
 		log.Errorf("Unable to connect to database: %v", err)
 		return nil, err
@@ -29,12 +29,12 @@ func NewConnection(log *logger.Logger) (*pgx.Conn, error) {
 
 	log.Infof("Database connected")
 
-	if err := conn.Ping(context.Background()); err != nil {
+	if err := pool.Ping(context.Background()); err != nil {
 		log.Errorf("Database ping failed: %v", err)
 		return nil, err
 	}
 
 	log.Infof("Database ping successful")
 
-	return conn, nil
+	return pool, nil
 }
