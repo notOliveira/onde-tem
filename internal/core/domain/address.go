@@ -48,3 +48,11 @@ func NewAddress(street, number, district, city, state, country, zipCode string) 
 
 	return address, nil
 }
+
+func (a Address) Street() string   { return a.street }
+func (a Address) Number() string   { return a.number }
+func (a Address) District() string { return a.district }
+func (a Address) City() string     { return a.city }
+func (a Address) State() string    { return a.state }
+func (a Address) Country() string  { return a.country }
+func (a Address) ZipCode() string  { return a.zipCode }

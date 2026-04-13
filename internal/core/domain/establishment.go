@@ -90,14 +90,10 @@ func (e *Establishment) ID() EstablishmentID {
 }
 
 // Name returns the name of the establishment.
-func (e *Establishment) Name() string {
-	return e.name
-}
+func (e *Establishment) Name() string { return e.name }
 
 // Slug returns the slug of the establishment.
-func (e *Establishment) Slug() Slug {
-	return e.slug
-}
+func (e *Establishment) Slug() Slug { return e.slug }
 
 // EstablishmentTypes returns a copy of the slice of establishment types.
 func (e *Establishment) EstablishmentTypes() []EstablishmentType {
@@ -105,44 +101,28 @@ func (e *Establishment) EstablishmentTypes() []EstablishmentType {
 }
 
 // Email returns the email of the establishment.
-func (e *Establishment) Email() string {
-	return e.email
-}
+func (e *Establishment) Email() string { return e.email }
 
 // Website returns the website of the establishment.
-func (e *Establishment) Website() string {
-	return e.website
-}
+func (e *Establishment) Website() string { return e.website }
 
 // Phones returns a copy of the slice of phones.
-func (e *Establishment) Phones() []Phone {
-	return append([]Phone{}, e.phones...)
-}
+func (e *Establishment) Phones() []Phone { return append([]Phone{}, e.phones...) }
 
 // Location returns the location of the establishment.
-func (e *Establishment) Location() Location {
-	return e.location
-}
+func (e *Establishment) Location() Location { return e.location }
 
 // Address returns the address of the establishment.
-func (e *Establishment) Address() Address {
-	return e.address
-}
+func (e *Establishment) Address() Address { return e.address }
 
 // Timezone returns the timezone of the establishment.
-func (e *Establishment) Timezone() string {
-	return e.timezone
-}
+func (e *Establishment) Timezone() string { return e.timezone }
 
 // CreatedAt returns the creation time of the establishment.
-func (e *Establishment) CreatedAt() time.Time {
-	return e.createdAt
-}
+func (e *Establishment) CreatedAt() time.Time { return e.createdAt }
 
 // UpdatedAt returns the last update time of the establishment.
-func (e *Establishment) UpdatedAt() time.Time {
-	return e.updatedAt
-}
+func (e *Establishment) UpdatedAt() time.Time { return e.updatedAt }
 
 // UpdateName updates the name of the establishment. The name cannot be empty.
 func (e *Establishment) UpdateName(name string) error {
