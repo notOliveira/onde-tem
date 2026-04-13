@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"encoding/json"
+	"github.com/notOliveira/onde-tem/internal/adapters/dto"
 	"github.com/notOliveira/onde-tem/internal/adapters/outbound/persistence/postgres/sqlc"
 	"github.com/notOliveira/onde-tem/internal/core/domain"
 	"github.com/notOliveira/onde-tem/internal/core/ports"
@@ -51,15 +52,8 @@ func (r *establishmentRepository) toCreateParams(
 	e *domain.Establishment,
 ) (sqlc.CreateEstablishmentParams, error) {
 
-	phonesJSON, err := json.Marshal(e.Phones())
-	if err != nil {
-		return sqlc.CreateEstablishmentParams{}, err
-	}
-
-	addressJSON, err := json.Marshal(e.Address())
-	if err != nil {
-		return sqlc.CreateEstablishmentParams{}, err
-	}
+	phonesJSON, _ := json.Marshal(dto.PhonesFromDomain(e.Phones()))
+	addressJSON, _ := json.Marshal(dto.AddressFromDomain(e.Address()))
 
 	types := make([]string, len(e.EstablishmentTypes()))
 	for i, t := range e.EstablishmentTypes() {
@@ -116,17 +110,24 @@ func (r *establishmentRepository) GetBySlug(
 		return nil, err
 	}
 
-	var phones []domain.Phone
-	if err := json.Unmarshal(row.Phones, &phones); err != nil {
+	var phonesDTO []dto.PhoneDTO
+	if err := json.Unmarshal(row.Phones, &phonesDTO); err != nil {
 		return nil, err
 	}
 
-	var address domain.Address
-	if err := json.Unmarshal(row.Address, &address); err != nil {
+	var addressDTO dto.AddressDTO
+	if err := json.Unmarshal(row.Address, &addressDTO); err != nil {
 		return nil, err
 	}
 
 	location, err := domain.NewLocation(row.Lat, row.Lon)
+	if err != nil {
+		return nil, err
+	}
+	address, err := domain.NewAddress(
+		addressDTO.Street, addressDTO.Number, addressDTO.District,
+		addressDTO.City, addressDTO.State, addressDTO.Country, addressDTO.ZipCode,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +146,16 @@ func (r *establishmentRepository) GetBySlug(
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	parsedID, _ := domain.ParseEstablishmentID(row.ID.String())
+	est.SetID(parsedID)
+	est.UpdateContact(row.Email, row.Website)
+	est.UpdateTimezone(row.Timezone)
+
+	for _, pDTO := range phonesDTO {
+		phone, _ := domain.NewPhone(pDTO.CountryCode, pDTO.Number, pDTO.Label)
+		est.AddPhone(phone)
 	}
 
 	return est, nil
