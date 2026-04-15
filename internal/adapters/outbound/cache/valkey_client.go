@@ -5,7 +5,10 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/notOliveira/onde-tem/internal/core/ports"
 )
+
+var _ ports.Cache = (*ValkeyClient)(nil)
 
 type ValkeyClient struct {
 	client *redis.Client
