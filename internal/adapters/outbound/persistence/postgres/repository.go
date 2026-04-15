@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"errors"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"encoding/json"
+	"github.com/notOliveira/onde-tem/internal/adapters/dto"
 	"github.com/notOliveira/onde-tem/internal/adapters/outbound/persistence/postgres/sqlc"
 	"github.com/notOliveira/onde-tem/internal/core/domain"
 	"github.com/notOliveira/onde-tem/internal/core/ports"
@@ -16,6 +16,8 @@ import (
 type establishmentRepository struct {
 	q *sqlc.Queries
 }
+
+var _ ports.EstablishmentRepository = (*establishmentRepository)(nil)
 
 func NewEstablishmentRepository(q *sqlc.Queries) ports.EstablishmentRepository {
 	return &establishmentRepository{q: q}
@@ -26,35 +28,39 @@ func (r *establishmentRepository) Create(
 	e *domain.Establishment,
 ) error {
 
-	return r.mapToDomain(ctx, e)
+	params, err := r.toCreateParams(e)
+	if err != nil {
+		return err
+	}
+
+	id, err := r.q.CreateEstablishment(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	parsedID, err := domain.ParseEstablishmentID(id.String())
+	if err != nil {
+		return err
+	}
+
+	e.SetID(parsedID)
+
+	return nil
 }
 
-func (r *establishmentRepository) mapToDomain(
-	ctx context.Context,
+func (r *establishmentRepository) toCreateParams(
 	e *domain.Establishment,
-) error {
-	uid, err := uuid.Parse(e.ID().String())
-	if err != nil {
-		return err
-	}
+) (sqlc.CreateEstablishmentParams, error) {
 
-	phonesJSON, err := json.Marshal(e.Phones())
-	if err != nil {
-		return err
-	}
-
-	addressJSON, err := json.Marshal(e.Address())
-	if err != nil {
-		return err
-	}
+	phonesJSON, _ := json.Marshal(dto.PhonesFromDomain(e.Phones()))
+	addressJSON, _ := json.Marshal(dto.AddressFromDomain(e.Address()))
 
 	types := make([]string, len(e.EstablishmentTypes()))
 	for i, t := range e.EstablishmentTypes() {
 		types[i] = t.String()
 	}
 
-	params := sqlc.CreateEstablishmentParams{
-		ID:        uid,
+	return sqlc.CreateEstablishmentParams{
 		Name:      e.Name(),
 		Slug:      e.Slug().String(),
 		Types:     types,
@@ -67,9 +73,7 @@ func (r *establishmentRepository) mapToDomain(
 		Lon:       e.Location().Lon(),
 		CreatedAt: e.CreatedAt(),
 		UpdatedAt: e.UpdatedAt(),
-	}
-
-	return r.q.CreateEstablishment(ctx, params)
+	}, nil
 }
 
 func (r *establishmentRepository) Update(
@@ -106,22 +110,24 @@ func (r *establishmentRepository) GetBySlug(
 		return nil, err
 	}
 
-	id, err := domain.NewEstablishmentID(row.ID.String())
-	if err != nil {
+	var phonesDTO []dto.PhoneDTO
+	if err := json.Unmarshal(row.Phones, &phonesDTO); err != nil {
 		return nil, err
 	}
 
-	var phones []domain.Phone
-	if err := json.Unmarshal(row.Phones, &phones); err != nil {
-		return nil, err
-	}
-
-	var address domain.Address
-	if err := json.Unmarshal(row.Address, &address); err != nil {
+	var addressDTO dto.AddressDTO
+	if err := json.Unmarshal(row.Address, &addressDTO); err != nil {
 		return nil, err
 	}
 
 	location, err := domain.NewLocation(row.Lat, row.Lon)
+	if err != nil {
+		return nil, err
+	}
+	address, err := domain.NewAddress(
+		addressDTO.Street, addressDTO.Number, addressDTO.District,
+		addressDTO.City, addressDTO.State, addressDTO.Country, addressDTO.ZipCode,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +138,6 @@ func (r *establishmentRepository) GetBySlug(
 	}
 
 	est, err := domain.NewEstablishment(
-		id,
 		row.Name,
 		row.Slug,
 		types,
@@ -141,6 +146,16 @@ func (r *establishmentRepository) GetBySlug(
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	parsedID, _ := domain.ParseEstablishmentID(row.ID.String())
+	est.SetID(parsedID)
+	est.UpdateContact(row.Email, row.Website)
+	est.UpdateTimezone(row.Timezone)
+
+	for _, pDTO := range phonesDTO {
+		phone, _ := domain.NewPhone(pDTO.CountryCode, pDTO.Number, pDTO.Label)
+		est.AddPhone(phone)
 	}
 
 	return est, nil

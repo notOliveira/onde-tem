@@ -1,6 +1,5 @@
--- name: CreateEstablishment :exec
+-- name: CreateEstablishment :one
 INSERT INTO establishments (
-    id,
     name,
     slug,
     types,
@@ -13,7 +12,6 @@ INSERT INTO establishments (
     created_at,
     updated_at
 ) VALUES (
-    @id,
     @name,
     @slug,
     @types,
@@ -25,7 +23,8 @@ INSERT INTO establishments (
     ST_SetSRID(ST_MakePoint(@lon, @lat), 4326),
     @created_at,
     @updated_at
-);
+)
+RETURNING id;
 
 -- name: GetEstablishmentByID :one
 SELECT

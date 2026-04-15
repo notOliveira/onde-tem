@@ -6,7 +6,7 @@ System to find information about establishments, enriched with collaborative inf
 
 ## Terminal commands
 
-Reset all application & run migrations (Recommended for first-time run)
+Reset all application & run migrations (Recommended for first-time run or if you're lost)
 ```bash
 make reset-all
 ```
@@ -18,6 +18,11 @@ docker compose up --build
 make up-build
 # Stop
 Ctrl + C
+```
+
+You can sanity check the system! (the Docker containers may be running. If not, it will fail)
+```bash
+make sanity
 ```
 
 Start containers (without rebuild):
@@ -92,20 +97,6 @@ gofmt -w .
 make fmt
 ```
 
-Run go vet:
-```bash
-go vet ./...
-# Or
-make vet
-```
-
-Run linter:
-```bash
-golangci-lint run
-# Or
-make lint
-```
-
 Generate SQLC files:
 ```bash
 sqlc generate
@@ -118,6 +109,20 @@ Tidy go modules:
 go mod tidy
 # Or
 make tidy
+```
+
+Run go vet:
+```bash
+go vet ./...
+# Or
+make vet
+```
+
+Run linter:
+```bash
+golangci-lint run
+# Or
+make lint
 ```
 
 ---

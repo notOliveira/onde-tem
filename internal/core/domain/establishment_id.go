@@ -6,7 +6,7 @@ var ErrInvalidEstablishmentID = errors.New("invalid establishment id")
 
 type EstablishmentID string
 
-func NewEstablishmentID(value string) (EstablishmentID, error) {
+func ParseEstablishmentID(value string) (EstablishmentID, error) {
 	if value == "" {
 		return "", ErrInvalidEstablishmentID
 	}

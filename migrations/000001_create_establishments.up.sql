@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE establishments (
-    id UUID PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     types TEXT[] NOT NULL,

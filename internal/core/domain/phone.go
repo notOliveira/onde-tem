@@ -32,3 +32,7 @@ func NewPhone(countryCode, number, label string) (Phone, error) {
 
 	return phone, nil
 }
+
+func (p Phone) CountryCode() string { return p.countryCode }
+func (p Phone) Number() string      { return p.number }
+func (p Phone) Label() string       { return p.label }

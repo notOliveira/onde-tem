@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:18-3.6
     container_name: onde-tem-db
     restart: always
     env_file:
@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - onde-tem-network
 
@@ -40,6 +40,15 @@ services:
     ]
     depends_on:
       - db
+  
+  valkey:
+    image: valkey/valkey:latest
+    container_name: onde-tem-cache
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - onde-tem-network
 
 volumes:
   postgres_data:

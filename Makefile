@@ -5,6 +5,48 @@ APP_NAME=onde-tem
 DB_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}
 
 # =========================
+# SANITY CHECKS
+# =========================
+
+sanity:
+	@echo ================================
+	@echo   🔍 SANITY CHECK STARTING
+	@echo ================================
+
+	@echo.
+	@echo 🐳 Checking Docker...
+	@docker ps > NUL 2>&1 || (echo ❌ Docker is NOT running & exit 1)
+	@echo ✅ Docker is running
+
+	@echo.
+	@echo 🐘 Checking Postgres container...
+	@docker compose ps db | findstr "Up" > NUL || (echo ❌ Postgres container is NOT running & exit 1)
+	@echo ✅ Postgres container is up
+
+	@echo.
+	@echo 📡 Checking Postgres connection...
+	@docker compose exec db pg_isready -U ${DB_USER} || (echo ❌ Postgres not accepting connections & exit 1)
+
+	@echo.
+	@echo 🧱 Checking migration version...
+	@docker compose run --rm migrate version || (echo ❌ Migration check failed & exit 1)
+
+	@echo.
+	@echo ⚙️ Running sqlc generate...
+	@sqlc generate || (echo ❌ sqlc failed & exit 1)
+	@echo ✅ sqlc OK
+
+	@echo.
+	@echo 🧪 Running tests...
+	@go test ./... || (echo ❌ Tests failing & exit 1)
+
+	@echo.
+	@echo ================================
+	@echo   ✅ ENVIRONMENT HEALTHY
+	@echo ================================
+
+
+# =========================
 # Docker
 # =========================
 
@@ -12,6 +54,7 @@ reset-all:
 	docker compose down -v --rmi all --remove-orphans
 	docker compose build
 	docker compose run migrate up
+	sqlc generate
 
 up:
 	docker compose up -d
