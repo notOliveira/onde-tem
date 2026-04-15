@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
-	"os"
+	//"os"
 
 	"github.com/notOliveira/onde-tem/internal/adapters/outbound/cache"
-	"github.com/notOliveira/onde-tem/internal/core/usecase"
+	//"github.com/notOliveira/onde-tem/internal/adapters/outbound/persistence/postgres"
+	//"github.com/notOliveira/onde-tem/internal/adapters/outbound/persistence/postgres/sqlc"
+	//"github.com/notOliveira/onde-tem/internal/core/usecase"
 	"github.com/notOliveira/onde-tem/internal/infra/config"
 	"github.com/notOliveira/onde-tem/internal/infra/database"
 )
@@ -15,33 +16,26 @@ func main() {
 
 	log := config.GetLogger("main")
 
-	if err := config.Init(); err != nil {
-		log.Errorf("Failed to initialize config: %v", err)
-		return
-	}
+	cfg := config.LoadConfig()
 
 	connPool, err := database.NewConnection(log)
-	if err != nil {
-		log.Errorf("failed to connect db: %v", err)
-		return
-	}
-	defer connPool.Close()
+    if err != nil {
+        log.Errorf("failed to connect db: %v", err)
+        return
+    }
+    defer connPool.Close()
 
-	host := os.Getenv("VALKEY_HOST")
-	port := os.Getenv("VALKEY_PORT")
-	addr := fmt.Sprintf("%s:%s", host, port)
+	//queries := sqlc.New(connPool)
 
-	cacheClient := cache.NewValkeyClient(addr)
+	//establishmentRepo := postgres.NewEstablishmentRepository(queries)
 
-	// USECASE
-	healthUC := usecase.NewHealthUseCase(cacheClient)
+	valkeyClient := cache.NewValkeyClient(cfg.ValkeyAddr)
+    _ = valkeyClient
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		result := healthUC.Execute(r.Context())
-		fmt.Fprintln(w, result)
-	})
+	// http.HandleFunc("/establishments", establishmentHandler.HandleCreate)
 
-	log.Info("Server running on :8080")
-
-	http.ListenAndServe(":8080", nil)
+	log.Infof("Server running on %s", cfg.ServerPort)
+    if err := http.ListenAndServe(cfg.ServerPort, nil); err != nil {
+        log.Errorf("Server error: %v", err)
+    }
 }
