@@ -14,8 +14,14 @@ func LoadConfig() *Config {
 	host := os.Getenv("VALKEY_HOST")
 	port := os.Getenv("VALKEY_PORT")
 
+	server := os.Getenv("SERVER_PORT")
+
+	if server != "" && server[0] != ':' {
+		server = ":" + server
+	}
+
 	return &Config{
-		ServerPort: os.Getenv("SERVER_PORT"),
+		ServerPort: server,
 		ValkeyAddr: host + ":" + port,
 	}
 }
