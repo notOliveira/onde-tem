@@ -51,10 +51,40 @@ sanity:
 # =========================
 
 reset-all:
-	docker compose down -v --rmi all --remove-orphans
-	docker compose build
-	docker compose run migrate up
-	sqlc generate
+	@echo =========================================
+	@echo   ☢️  NUCLEAR RESET STARTING
+	@echo =========================================
+
+	@echo.
+	@echo 🧹 1/5 Destroying old environment...
+	@docker compose down -v --rmi all --remove-orphans || (echo ❌ Teardown failed & exit 1)
+	@echo ✅ Environment cleaned
+
+	@echo.
+	@echo ⚙️  2/5 Generating database code (sqlc)...
+	@sqlc generate || (echo ❌ sqlc generation failed & exit 1)
+	@echo ✅ Code generated
+
+	@echo.
+	@echo 🏗️  3/5 Building fresh images...
+	@docker compose build || (echo ❌ Build failed & exit 1)
+	@echo ✅ Images built
+
+	@echo.
+	@echo 🐘 4/5 Bootstrapping database and running migrations...
+	@docker compose run --rm migrate up || (echo ❌ Migrations failed & exit 1)
+	@echo ✅ Database ready and migrated
+
+	@echo.
+	@echo 🚀 5/5 Starting all services...
+	@docker compose up -d || (echo ❌ Failed to start services & exit 1)
+	@echo ✅ All services running
+
+	@echo.
+	@echo =========================================
+	@echo   ✅ ENVIRONMENT RESET COMPLETE
+	@echo =========================================
+	
 
 up:
 	docker compose up -d
