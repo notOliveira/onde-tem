@@ -20,7 +20,9 @@ type CreateEstablishmentUseCase struct {
 }
 
 func NewCreateEstablishmentUseCase(repo ports.EstablishmentRepository) *CreateEstablishmentUseCase {
-	return &CreateEstablishmentUseCase{repo: repo}
+	return &CreateEstablishmentUseCase{
+		repo: repo,
+	}
 }
 
 func (uc *CreateEstablishmentUseCase) Execute(ctx context.Context, input CreateEstablishmentInput) (*domain.Establishment, error) {
@@ -41,7 +43,8 @@ func (uc *CreateEstablishmentUseCase) Execute(ctx context.Context, input CreateE
 		return nil, err
 	}
 
-	if err := uc.repo.Create(ctx, est); err != nil {
+	err = uc.repo.Create(ctx, est)
+	if err != nil {
 		return nil, err
 	}
 
