@@ -176,7 +176,7 @@ func (e *Establishment) RemovePhone(countryCode, number string) {
 	}
 }
 
-// UpdateAddress updates the address of the establishment.
+// UpdateLocation updates the location of the establishment.
 func (e *Establishment) UpdateLocation(location Location) error {
 	if !location.IsValid() {
 		return ErrInvalidLocation
@@ -187,6 +187,25 @@ func (e *Establishment) UpdateLocation(location Location) error {
 }
 
 // UpdateAddress updates the address of the establishment.
+func (e *Establishment) UpdateAddress(address Address) error {
+	newAddress, err := NewAddress(
+		address.street,
+		address.number,
+		address.district,
+		address.city,
+		address.state,
+		address.country,
+		address.zipCode,
+	)
+	if err != nil {
+		return err
+	}
+	e.address = newAddress
+	e.updatedAt = time.Now()
+	return nil
+}
+
+// UpdateTimezone updates the timezone of the establishment.
 func (e *Establishment) UpdateTimezone(timezone string) error {
 	_, err := time.LoadLocation(timezone)
 	if err != nil {
