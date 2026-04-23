@@ -56,27 +56,32 @@ reset-all:
 	@echo =========================================
 
 	@echo.
-	@echo 🧹 1/5 Destroying old environment...
+	@echo 🧹 1/6 Destroying old environment...
 	@docker compose down -v --rmi all --remove-orphans || (echo ❌ Teardown failed & exit 1)
 	@echo ✅ Environment cleaned
 
 	@echo.
-	@echo ⚙️  2/5 Generating database code (sqlc)...
+	@echo ⚙️  2/6 Generating database code (sqlc)...
 	@sqlc generate || (echo ❌ sqlc generation failed & exit 1)
 	@echo ✅ Code generated
 
 	@echo.
-	@echo 🏗️  3/5 Building fresh images...
+	@echo 🏗️  3/6 Building fresh images...
 	@docker compose build || (echo ❌ Build failed & exit 1)
 	@echo ✅ Images built
 
 	@echo.
-	@echo 🐘 4/5 Bootstrapping database and running migrations...
+	@echo 🐘 4/6 Bootstrapping database and running migrations...
 	@docker compose run --rm migrate up || (echo ❌ Migrations failed & exit 1)
 	@echo ✅ Database ready and migrated
 
+		@echo.
+	@echo 📏 5/6 Formatting code...
+	@gofmt -w . || (echo ❌ Code formatting failed & exit 1)
+	@echo ✅ Code formatted
+
 	@echo.
-	@echo 🚀 5/5 Starting all services...
+	@echo 🚀 6/6 Starting all services...
 	@docker compose up -d || (echo ❌ Failed to start services & exit 1)
 	@echo ✅ All services running
 
