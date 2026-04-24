@@ -11,6 +11,11 @@ services:
       - postgres_data:/var/lib/postgresql
     networks:
       - onde-tem-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
 
   api:
     build: .
