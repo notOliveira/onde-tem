@@ -8,7 +8,7 @@ DB_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?ssl
 # SANITY CHECKS
 # =========================
 
-sanity:
+ sanity:
 	@echo ================================
 	@echo   🔍 SANITY CHECK STARTING
 	@echo ================================
@@ -75,7 +75,7 @@ reset-all:
 	@docker compose run --rm migrate up || (echo ❌ Migrations failed & exit 1)
 	@echo ✅ Database ready and migrated
 
-		@echo.
+	@echo.
 	@echo 📏 5/6 Formatting code...
 	@gofmt -w . || (echo ❌ Code formatting failed & exit 1)
 	@echo ✅ Code formatted
