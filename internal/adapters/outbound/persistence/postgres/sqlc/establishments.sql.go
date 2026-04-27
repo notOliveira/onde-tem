@@ -34,7 +34,7 @@ INSERT INTO establishments (
     $6,
     $7,
     $8,
-    ST_SetSRID(ST_MakePoint($9, $10), 4326),
+    ST_SetSRID(ST_MakePoint($9::double precision, $10::double precision), 4326),
     $11,
     $12
 )
@@ -42,18 +42,18 @@ RETURNING id
 `
 
 type CreateEstablishmentParams struct {
-	Name      string      `json:"name"`
-	Slug      string      `json:"slug"`
-	Types     []string    `json:"types"`
-	Email     string      `json:"email"`
-	Website   string      `json:"website"`
-	Timezone  string      `json:"timezone"`
-	Phones    []byte      `json:"phones"`
-	Address   []byte      `json:"address"`
-	Lon       interface{} `json:"lon"`
-	Lat       interface{} `json:"lat"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Types     []string  `json:"types"`
+	Email     string    `json:"email"`
+	Website   string    `json:"website"`
+	Timezone  string    `json:"timezone"`
+	Phones    []byte    `json:"phones"`
+	Address   []byte    `json:"address"`
+	Lon       float64   `json:"lon"`
+	Lat       float64   `json:"lat"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishmentParams) (uuid.UUID, error) {
@@ -97,8 +97,8 @@ SELECT
     timezone,
     phones,
     address,
-    ST_Y(location) AS lat,
-    ST_X(location) AS lon,
+    CAST(ST_Y(location) AS double precision) AS lat,
+    CAST(ST_X(location) AS double precision) AS lon,
     created_at,
     updated_at
 FROM establishments
@@ -106,19 +106,19 @@ WHERE id = $1
 `
 
 type GetEstablishmentByIDRow struct {
-	ID        uuid.UUID   `json:"id"`
-	Name      string      `json:"name"`
-	Slug      string      `json:"slug"`
-	Types     []string    `json:"types"`
-	Email     string      `json:"email"`
-	Website   string      `json:"website"`
-	Timezone  string      `json:"timezone"`
-	Phones    []byte      `json:"phones"`
-	Address   []byte      `json:"address"`
-	Lat       interface{} `json:"lat"`
-	Lon       interface{} `json:"lon"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Types     []string  `json:"types"`
+	Email     string    `json:"email"`
+	Website   string    `json:"website"`
+	Timezone  string    `json:"timezone"`
+	Phones    []byte    `json:"phones"`
+	Address   []byte    `json:"address"`
+	Lat       float64   `json:"lat"`
+	Lon       float64   `json:"lon"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (q *Queries) GetEstablishmentByID(ctx context.Context, id uuid.UUID) (GetEstablishmentByIDRow, error) {
@@ -196,4 +196,53 @@ func (q *Queries) GetEstablishmentBySlug(ctx context.Context, slug string) (GetE
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const updateEstablishment = `-- name: UpdateEstablishment :exec
+UPDATE establishments
+SET
+    name = $1,
+    slug = $2,
+    types = $3,
+    email = $4,
+    website = $5,
+    timezone = $6,
+    phones = $7,
+    address = $8,
+    location = ST_SetSRID(ST_MakePoint($9::double precision, $10::double precision), 4326),
+    updated_at = $11
+WHERE id = $12
+`
+
+type UpdateEstablishmentParams struct {
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Types     []string  `json:"types"`
+	Email     string    `json:"email"`
+	Website   string    `json:"website"`
+	Timezone  string    `json:"timezone"`
+	Phones    []byte    `json:"phones"`
+	Address   []byte    `json:"address"`
+	Lon       float64   `json:"lon"`
+	Lat       float64   `json:"lat"`
+	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateEstablishment(ctx context.Context, arg UpdateEstablishmentParams) error {
+	_, err := q.db.Exec(ctx, updateEstablishment,
+		arg.Name,
+		arg.Slug,
+		arg.Types,
+		arg.Email,
+		arg.Website,
+		arg.Timezone,
+		arg.Phones,
+		arg.Address,
+		arg.Lon,
+		arg.Lat,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	return err
 }
