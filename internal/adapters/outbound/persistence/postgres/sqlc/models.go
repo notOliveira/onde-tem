@@ -11,16 +11,16 @@ import (
 )
 
 type Establishment struct {
-	ID        uuid.UUID
-	Name      string
-	Slug      string
-	Types     []string
-	Email     string
-	Website   string
-	Timezone  string
-	Phones    []byte
-	Address   []byte
-	Location  interface{}
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uuid.UUID   `json:"id"`
+	Name      string      `json:"name"`
+	Slug      string      `json:"slug"`
+	Types     []string    `json:"types"`
+	Email     string      `json:"email"`
+	Website   string      `json:"website"`
+	Timezone  string      `json:"timezone"`
+	Phones    []byte      `json:"phones"`
+	Address   []byte      `json:"address"`
+	Location  interface{} `json:"location"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }

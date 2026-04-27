@@ -2,11 +2,11 @@ package postgres
 
 import (
 	"context"
-
 	"errors"
 	"github.com/jackc/pgx/v5"
 
 	"encoding/json"
+
 	"github.com/notOliveira/onde-tem/internal/adapters/dto"
 	"github.com/notOliveira/onde-tem/internal/adapters/outbound/persistence/postgres/sqlc"
 	"github.com/notOliveira/onde-tem/internal/core/domain"
@@ -124,6 +124,7 @@ func (r *establishmentRepository) GetBySlug(
 	if err != nil {
 		return nil, err
 	}
+
 	address, err := domain.NewAddress(
 		addressDTO.Street, addressDTO.Number, addressDTO.District,
 		addressDTO.City, addressDTO.State, addressDTO.Country, addressDTO.ZipCode,
@@ -132,31 +133,44 @@ func (r *establishmentRepository) GetBySlug(
 		return nil, err
 	}
 
-	types := make([]domain.EstablishmentType, len(row.Types))
-	for i, t := range row.Types {
-		types[i] = domain.EstablishmentType(t)
+	var domainPhones []domain.Phone
+	for _, pDTO := range phonesDTO {
+		phone, err := domain.NewPhone(pDTO.CountryCode, pDTO.Number, pDTO.Label)
+		if err != nil {
+			return nil, err
+		}
+		domainPhones = append(domainPhones, phone)
 	}
 
-	est, err := domain.NewEstablishment(
-		row.Name,
-		row.Slug,
-		types,
-		location,
-		address,
-	)
+	parsedID, err := domain.ParseEstablishmentID(row.ID.String())
 	if err != nil {
 		return nil, err
 	}
 
-	parsedID, _ := domain.ParseEstablishmentID(row.ID.String())
-	est.SetID(parsedID)
-	est.UpdateContact(row.Email, row.Website)
-	est.UpdateTimezone(row.Timezone)
-
-	for _, pDTO := range phonesDTO {
-		phone, _ := domain.NewPhone(pDTO.CountryCode, pDTO.Number, pDTO.Label)
-		est.AddPhone(phone)
+	parsedSlug, err := domain.NewSlug(row.Slug)
+	if err != nil {
+		return nil, err
 	}
+
+	domainTypes := make([]domain.EstablishmentType, len(row.Types))
+	for i, t := range row.Types {
+		domainTypes[i] = domain.EstablishmentType(t)
+	}
+
+	est := domain.RehydrateEstablishment(
+		parsedID,
+		row.Name,
+		parsedSlug,
+		domainTypes,
+		row.Email,
+		row.Website,
+		domainPhones,
+		location,
+		address,
+		row.Timezone,
+		row.CreatedAt,
+		row.UpdatedAt,
+	)
 
 	return est, nil
 }

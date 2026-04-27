@@ -42,18 +42,18 @@ RETURNING id
 `
 
 type CreateEstablishmentParams struct {
-	Name      string
-	Slug      string
-	Types     []string
-	Email     string
-	Website   string
-	Timezone  string
-	Phones    []byte
-	Address   []byte
-	Lon       interface{}
-	Lat       interface{}
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Name      string      `json:"name"`
+	Slug      string      `json:"slug"`
+	Types     []string    `json:"types"`
+	Email     string      `json:"email"`
+	Website   string      `json:"website"`
+	Timezone  string      `json:"timezone"`
+	Phones    []byte      `json:"phones"`
+	Address   []byte      `json:"address"`
+	Lon       interface{} `json:"lon"`
+	Lat       interface{} `json:"lat"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 func (q *Queries) CreateEstablishment(ctx context.Context, arg CreateEstablishmentParams) (uuid.UUID, error) {
@@ -106,19 +106,19 @@ WHERE id = $1
 `
 
 type GetEstablishmentByIDRow struct {
-	ID        uuid.UUID
-	Name      string
-	Slug      string
-	Types     []string
-	Email     string
-	Website   string
-	Timezone  string
-	Phones    []byte
-	Address   []byte
-	Lat       interface{}
-	Lon       interface{}
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uuid.UUID   `json:"id"`
+	Name      string      `json:"name"`
+	Slug      string      `json:"slug"`
+	Types     []string    `json:"types"`
+	Email     string      `json:"email"`
+	Website   string      `json:"website"`
+	Timezone  string      `json:"timezone"`
+	Phones    []byte      `json:"phones"`
+	Address   []byte      `json:"address"`
+	Lat       interface{} `json:"lat"`
+	Lon       interface{} `json:"lon"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 func (q *Queries) GetEstablishmentByID(ctx context.Context, id uuid.UUID) (GetEstablishmentByIDRow, error) {
@@ -162,19 +162,19 @@ WHERE slug = $1
 `
 
 type GetEstablishmentBySlugRow struct {
-	ID        uuid.UUID
-	Name      string
-	Slug      string
-	Types     []string
-	Email     string
-	Website   string
-	Timezone  string
-	Phones    []byte
-	Address   []byte
-	Lat       float64
-	Lon       float64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Types     []string  `json:"types"`
+	Email     string    `json:"email"`
+	Website   string    `json:"website"`
+	Timezone  string    `json:"timezone"`
+	Phones    []byte    `json:"phones"`
+	Address   []byte    `json:"address"`
+	Lat       float64   `json:"lat"`
+	Lon       float64   `json:"lon"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (q *Queries) GetEstablishmentBySlug(ctx context.Context, slug string) (GetEstablishmentBySlugRow, error) {

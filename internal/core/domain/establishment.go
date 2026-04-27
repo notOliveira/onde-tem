@@ -230,3 +230,35 @@ func (e *Establishment) SetTypes(types []EstablishmentType) error {
 	e.updatedAt = time.Now()
 	return nil
 }
+
+// RehydrateEstablishment is used strictly by repositories to restore an entity from the database state.
+// It skips business validations meant for creation and preserves database timestamps.
+func RehydrateEstablishment(
+	id EstablishmentID,
+	name string,
+	slug Slug,
+	types []EstablishmentType,
+	email string,
+	website string,
+	phones []Phone,
+	location Location,
+	address Address,
+	timezone string,
+	createdAt time.Time,
+	updatedAt time.Time,
+) *Establishment {
+	return &Establishment{
+		id:        id,
+		name:      name,
+		slug:      slug,
+		types:     types,
+		email:     email,
+		website:   website,
+		phones:    phones,
+		location:  location,
+		address:   address,
+		timezone:  timezone,
+		createdAt: createdAt,
+		updatedAt: updatedAt,
+	}
+}
