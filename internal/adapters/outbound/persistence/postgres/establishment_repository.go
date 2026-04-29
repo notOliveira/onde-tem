@@ -15,12 +15,12 @@ import (
 )
 
 type establishmentRepository struct {
-	q *sqlc.Queries
+	q sqlc.Querier
 }
 
 var _ ports.EstablishmentRepository = (*establishmentRepository)(nil)
 
-func NewEstablishmentRepository(q *sqlc.Queries) ports.EstablishmentRepository {
+func NewEstablishmentRepository(q sqlc.Querier) ports.EstablishmentRepository {
 	return &establishmentRepository{q: q}
 }
 
