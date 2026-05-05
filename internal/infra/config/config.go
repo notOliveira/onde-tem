@@ -8,12 +8,12 @@ import (
 type Config struct {
 	ServerPort string
 	ValkeyAddr string
+	CacheTTL   int
 }
 
 func LoadConfig() *Config {
 	host := os.Getenv("VALKEY_HOST")
 	port := os.Getenv("VALKEY_PORT")
-
 	server := os.Getenv("SERVER_PORT")
 
 	if server != "" && server[0] != ':' {
@@ -23,6 +23,7 @@ func LoadConfig() *Config {
 	return &Config{
 		ServerPort: server,
 		ValkeyAddr: host + ":" + port,
+		CacheTTL:   600, // 10 minutes
 	}
 }
 

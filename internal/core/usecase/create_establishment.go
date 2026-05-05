@@ -16,12 +16,14 @@ type CreateEstablishmentInput struct {
 }
 
 type CreateEstablishmentUseCase struct {
-	repo ports.EstablishmentRepository
+	repo  ports.EstablishmentRepository
+	cache ports.Cache
 }
 
-func NewCreateEstablishmentUseCase(repo ports.EstablishmentRepository) *CreateEstablishmentUseCase {
+func NewCreateEstablishmentUseCase(repo ports.EstablishmentRepository, cache ports.Cache) *CreateEstablishmentUseCase {
 	return &CreateEstablishmentUseCase{
-		repo: repo,
+		repo:  repo,
+		cache: cache,
 	}
 }
 
@@ -45,6 +47,10 @@ func (uc *CreateEstablishmentUseCase) Execute(ctx context.Context, input CreateE
 
 	err = uc.repo.Create(ctx, est)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := uc.cache.Delete(ctx, "est-"+est.ID().String()); err != nil {
 		return nil, err
 	}
 
