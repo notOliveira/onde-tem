@@ -187,6 +187,17 @@ db-shell:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME}
 
 # =========================
+# ERD
+# =========================
+
+erd-up:
+	npx serve erd-dist/ -p 3000
+
+erd-gen:
+	liam erd build --input "migrations/*.up.sql" --format postgres --output-dir "erd-dist"
+
+
+# =========================
 # Production build
 # =========================
 
