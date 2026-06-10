@@ -1,392 +1,177 @@
-# Roadmap de Evolução - Onde Tem?
+# Refatoração de Cache — Decorator Pattern
 
-## Visão Geral
+## Problema Atual
 
-Este documento contém o roadmap completo de evolução do projeto, organizado em fases de prioridade. O objetivo é transformar a aplicação em um sistema fácil de manter, escalável e moderno, respeitando Clean Architecture + Hexagonal Architecture.
+O cache está no Use Case (`list_establishments.go`, `create_establishment.go`), violando Hexagonal:
+- Use cases conhecem detalhes de infraestrutura (cache)
+- Serialização de domain entities falha (campos privados não deserializam)
+- Cache logic duplicada em múltiplos use cases
 
----
+## Solução: Cache Decorator
 
-## FASE 1 — Crítico (Bugs e Falhas)
-
-### 1.1 Implementar `List()` corretamente
-**Arquivo:** `internal/adapters/outbound/persistence/postgres/establishment_repository.go:310`
-
-O método `List()` retorna `nil, nil` - é um bug grave que faz qualquer listagem falhar silenciosamente.
-
-**Ação:**
-- Implementar query builder para `EstablishmentFilter`
-- Suportar filtros por `Types` (GIN index), `Search` (name/slug), `Limit`, `Offset`
-- Retornar `[]*domain.Establishment` ou erro
-
-**Referências:**
-- `internal/core/domain/establishment_filter.go`
-- `internal/core/ports/establishment_repository.go:14`
-
----
-
-### 1.2 Corrigir Cache Read/Write Pattern
-**Arquivo:** `internal/core/usecase/create_establishment.go`
-
-O cache atual só faz `Delete` (linha 53) mas nunca lê. É inútil.
-
-**Ação:**
-- Implementar cache-aside pattern:
-  1. `GetByID` → verificar cache primeiro → se miss, buscar no DB → store in cache
-  2. `GetBySlug` → mesma lógica
-  3. `List` → cachear resultado com TTL curto (1-5 min)
-- Usar key pattern: `est-{id}`, `est-slug-{slug}`, `est-list-{filter-hash}`
-- Tratar `redis.Nil` corretamente em `ValkeyClient.Get()`
-
-**Referências:**
-- `internal/adapters/outbound/cache/valkey_client.go`
-- `internal/core/ports/cache.go`
-
----
-
-### 1.3 Adicionar Transactions em Create/Update
-**Arquivo:** `internal/adapters/outbound/persistence/postgres/establishment_repository.go`
-
-`Create` e `Update` não usam transações PostgreSQL.
-
-**Ação:**
-- Envolver operações em `pgx.Tx`
-- Criar `WithTx(ctx context.Context, tx pgx.Tx)` no repository
-- Para `Create`: gerar UUID no código, não deixar o DB fazer (manter control)
-- Para `Update`: usar `SELECT ... FOR UPDATE` se necessário
-
----
-
-### 1.4 Eliminar Código Duplicado em Repository
-**Arquivo:** `internal/adapters/outbound/persistence/postgres/establishment_repository.go`
-
-`GetByID` e `GetBySlug` têm lógica idêntica de unmarshal e reidratação.
-
-**Ação:**
-- Extrair função privada `rowToEstablishment(row interface{}) (*domain.Establishment, error)`
-- Reduzir linhas de ~50 para ~10 em cada método
-
----
-
-## FASE 2 — Qualidade
-
-### 2.1 Implementar Validation Library
-**Arquivos:** DTOs e Handlers
-
-**Ação:**
-- Adicionar `go-playground/validator` ou `asaskevich/govalidator`
-- Validar DTOs HTTP no handler antes de converter para domain
-- Validar no use case como segunda barreira
-
-**Exemplos de validação:**
-- Email: formato válido, não vazio se fornecido
-- Phone: formato E.164 ou similar
-- Location: lat/lon dentro de ranges válidos
-- Name: não vazio, tamanho razoável (2-255 chars)
-- Slug: regex `[a-z0-9-]+`, sem leading/trailing hyphens
-
----
-
-### 2.2 Structured Logging
-**Arquivos:** `internal/infra/logger/logger.go`
-
-**Ação:**
-- Migrar para `zerolog` ou `zap`
-- Logs em JSON para integração com ELK/Datadog
-- Adicionar campos: `request_id`, `user_id` (se houver), `trace_id`
-
-**Formato esperado:**
-```json
-{"level":"info","time":"2026-05-06T22:00:00Z","msg":"Establishment created","id":"uuid","slug":"name","duration_ms":45}
+```
+[Handler] → [UseCase] → [CacheDecorator] → [RepositoryImpl] → [DB]
+                         ↓
+                    implements
+                 RepositoryInterface
 ```
 
----
-
-### 2.3 Error Wrapping Consistente
-**Arquivos:** Todos os use cases e repositories
-
-**Ação:**
-- Todos os erros devem ser wrapped com contexto: `fmt.Errorf("CreateEstablishmentUseCase.Execute: %w", err)`
-- Criar erros sentinel para cada camada:
-  - `domain.Err*` — erros de domínio (já existem)
-  - `repository.Err*` — erros de persistência
-  - `usecase.Err*` — erros de lógica de negócio
-- HTTP handler mapeia erros para status codes
-
-**Mapeamento sugerido:**
-| Erro | HTTP Status |
-|------|-------------|
-| `ErrEstablishmentNotFound` | 404 |
-| `ErrInvalidName`, `ErrInvalidTypes`, etc | 422 |
-| `ErrDuplicateSlug` | 409 |
-| `repository.Err*` | 500 |
-| `ErrInternal` | 500 |
+### Princípio
+- Use cases são pure business logic — não sabem que cache existe
+- Cache é um detalhe de infraestrutura que envolve o repository
+- Repository decorator implementa a mesma interface que o repository real
+- Genérico e reutilizável para qualquer repository
 
 ---
 
-### 2.4 Health Endpoint Real
-**Arquivo:** `internal/core/usecase/health.go`
+## Estado: Concluído
 
-O health check atual é apenas um teste de cache.
+### Etapa 1-3: Completo
 
-**Ação:**
-- Criar `/health` endpoint (GET)
-- Verificar:
-  - DB connectivity (`pool.Ping`)
-  - Cache connectivity (`valkeyClient.Ping`)
-- Retornar JSON estruturado:
-```json
-{
-  "status": "healthy",
-  "checks": {
-    "database": "ok",
-    "cache": "ok"
-  }
-}
+- `dto/establishment_cache.go` — `EstablishmentCacheDTO` + `ToEstablishmentCacheDTO()`
+- `dto/helpers.go` — `typeSliceToStrings()`
+- `internal/adapters/outbound/cache/cached_repository.go` — `CachedRepository` (sem generics) com cache-aside
+- `internal/core/usecase/list_establishments.go` — refatorado, só delega ao repo
+- `internal/core/usecase/create_establishment.go` — `cache.Delete()` removido
+- `domain/*.go` — MarshalJSON em todos os types
+- `queries/establishments.sql` — query `ListEstablishments`
+- `establishment_repository.go` — método `List()` implementado
+- Handler e router — `GET /establishments` funcional
+
+### Etapa 4: Completo
+
+- `dto/establishment_db_row.go` — DTO comum com `*RowToDBRow` (retornam erro) + `RowToEstablishment` usando `domain.RehydrateEstablishment`
+- `establishment_repository.go` — usa DTO helpers; arquivo caiu de 434 → 165 linhas
+- `ports/cache.go` — adicionada `DeletePattern(ctx, pattern) error`
+- `cache/valkey_client.go` — implementa `DeletePattern` via `SCAN` + `DEL` em batch de 100
+- `cache/cached_repository.go` — implementa `GetBySlug`, `Update`, `Delete`; assertion de interface; TTL configurável; `filter.Types` ordenados alfabeticamente; invalida List keys em todas as mutações
+- `app.go` — wire do `cachedRepo` com `cfg.CacheTTL`
+- Use Cases — parâmetro `cache` removido
+
+---
+
+## Resumo dos Arquivos Modificados (Etapa 4)
+
+| Arquivo | Ação |
+|---------|------|
+| `internal/adapters/dto/establishment_db_row.go` | **REESCRITO** — remove órfão, corrige rehidratação, propaga erros |
+| `internal/adapters/outbound/persistence/postgres/establishment_repository.go` | **REESCRITO** — usa DTO helpers (434 → 165 linhas) |
+| `internal/core/ports/cache.go` | **MODIFICADO** — adiciona `DeletePattern` |
+| `internal/adapters/outbound/cache/valkey_client.go` | **MODIFICADO** — implementa `DeletePattern` (SCAN+DEL batch) |
+| `internal/adapters/outbound/cache/cached_repository.go` | **REESCRITO** — completa interface, remove generics, usa `ttl` configurável |
+| `internal/infra/app/app.go` | **MODIFICADO** — wire do `cachedRepo` |
+| `internal/core/usecase/create_establishment.go` | **MODIFICADO** — remove `cache` |
+| `internal/core/usecase/list_establishments.go` | **MODIFICADO** — remove `cache` da assinatura |
+
+---
+
+## Próximos Passos
+
+- **Testes unitários** para `CachedRepository` (mock de `ports.EstablishmentRepository` e `ports.Cache`) — prioridade alta, decorator ainda não tem cobertura
+- **Transactions em Create/Update** (Fase 1.3 do `.roadmap`)
+- **Error wrapping consistente** (`fmt.Errorf("...: %w", err)`)
+- **Structured logging** (zerolog/zap)
+- **Health endpoint real** (`/health` com ping no DB e Valkey)
+- **Slug factory com verificação de duplicidade**
+
+---
+
+## Conceitos-Chave
+
+- **Decorator Pattern**: envolve um objeto existente sem alterar sua interface
+- **Dependency Inversion**: use case depende de abstração (interface), não de implementação concreta
+- **Single Responsibility**: use case faz lógica de negócio, decorator faz cache
+- **Open/Closed**: adiciona cache sem modificar use cases existentes
+- **Cache-Aside Pattern**: verificar cache → miss → buscar DB → guardar no cache
+- **SCAN + DEL pattern**: invalidação de chaves por prefixo sem bloquear o servidor (vs `KEYS *` que é O(N) e bloqueante)
+
+---
+
+## Session Log
+
+### 09/06/2026 — Conclusão da Etapa 4 (Decorator Pattern)
+
+#### Objetivo
+
+Concluir os Passos 4a-4d da refatoração de cache iniciada em 25-26/05/2026. O decorator já existia mas não estava wireado, o que significava que o cache não estava sendo usado em runtime — o bug original (cache hit retornando dados vazios) só foi resolvido parcialmente.
+
+#### Estado herdado das sessões anteriores
+
+- ✅ Etapas 1-3 completas (DTOs, decorator, use cases sem cache, query SQL, handler GET)
+- ⚠️ 4a parcialmente feito: `dto/establishment_db_row.go` existia com 2 bugs
+- ⚠️ 4b parcialmente feito: `List` usava `RehydrateEstablishments`, mas `GetByID`/`GetBySlug` não
+- ❌ 4c-4d pendentes
+- 🐛 Bug adicional: `CachedRepository` não implementava `Update`/`Delete`/`GetBySlug`, o que quebraria a build se fosse wireado
+
+#### Bugs identificados no código herdado
+
+1. **`establishment_db_row.go`** — função órfã `EstablishmentRowToDBRow` (nunca usada)
+2. **`RowToEstablishment`** chamava `domain.NewEstablishment` que zerava ID, gerava `time.Now()` e ignorava email/website/timezone — quebrava timestamps do DB
+3. **`unmarshalPhones`/`unmarshalAddress`** engoliam erros silenciosamente
+4. **`generateListCacheKey`** não ordenava `filter.Types`, gerando cache miss para mesma query com ordem diferente
+5. **`CachedRepository[T any]`** — generics eram overengineering (interface fixa, nunca usou `T`)
+6. **Decorator incompleto** — faltavam 3 métodos da interface, bloquearia o wire
+
+#### Decisões arquiteturais desta sessão
+
+- **`DeletePattern` na interface `Cache`**: para o SCAN funcionar sem vazar Redis para o decorator (alternativas rejeitadas: type-assert feio, expor `Scan` na interface)
+- **Ordenação alfabética de `filter.Types`**: evita cache miss por ordem, custo mínimo
+- **SCAN + DEL em batch de 100**: invalidação de List keys não-bloqueante (vs `KEYS *`)
+- **TTL configurável via construtor**: `time.Duration`, lido de `config.CacheTTL` no `app.go`
+- **Remoção dos generics `[T any]`**: decorator não é reutilizável para outras interfaces no momento; YAGNI
+
+#### Mudanças aplicadas
+
+| Passo | Arquivo | Mudança |
+|-------|---------|---------|
+| 1 | `dto/establishment_db_row.go` | Remove órfão, corrige `RowToEstablishment` (usa `RehydrateEstablishment`), `*RowToDBRow` retornam erro, `unmarshal*` propagam erro |
+| 2 | `establishment_repository.go` | 434→165 linhas. Remove `establishmentDBRow` local e `RehydrateEstablishments` exportado. `GetByID`/`GetBySlug`/`List` usam helpers do dto/ |
+| 3 | `ports/cache.go` | Adiciona `DeletePattern(ctx, pattern) error` |
+| 4 | `cache/valkey_client.go` | Implementa `DeletePattern` com SCAN iterator + DEL em batch de 100 |
+| 5 | `cache/cached_repository.go` | Remove `[T any]`, adiciona assertion de interface, implementa `GetBySlug`/`Update`/`Delete`, ordena `filter.Types`, TTL via construtor, `invalidateListCache` em todas as mutações |
+| 6 | `app.go` | Wire do `cachedRepo := cache.NewCachedRepository(repo, valkeyClient, time.Duration(cfg.CacheTTL)*time.Second)` |
+| 7 | `create_establishment.go` | Remove `cache` da struct e do construtor |
+| 8 | `list_establishments.go` | Remove `cache` da assinatura do construtor |
+
+#### Comportamento final do cache
+
+- **Leituras**: cache-aside em `GetByID` (chave `est-{id}`), `GetBySlug` (`est-slug:{slug}`), `List` (`est-list:{md5}`). Filtros com mesma semântica mas ordem diferente em `Types` geram a mesma chave.
+- **Mutações** (`Create`/`Update`/`Delete`): invalidam chave do ID, chave do slug (quando conhecida) e **todas** as chaves `est-list:*` via SCAN.
+- **TTL**: controlado por `config.CacheTTL` (em segundos), passado como `time.Duration` ao decorator.
+
+#### Verificação
+
 ```
-- Criar `/ready` para Kubernetes readiness probe
-
----
-
-### 2.5 Slug Factory com Verificação de Duplicidade
-**Arquivo:** `internal/core/domain/slug.go`
-
-**Ação:**
-- `NewSlug` deve receber `EstablishmentRepository` (ou interface `SlugUniquenessChecker`)
-- Verificar se slug já existe antes de retornar
-- Criar método `IsUnique(ctx context.Context, slug string) (bool, error)` no repository
-
----
-
-## FASE 3 — Escalabilidade
-
-### 3.1 Paginação Cursor-Based
-**Arquivos:** `internal/core/domain/establishment_filter.go`, `establishment_repository.go`
-
-OFFSET é lento para tabelas grandes. Usar keyset pagination.
-
-**Ação:**
-- Adicionar `Cursor string` no filtro (base64 do último ID visto)
-- Query: `WHERE id > :cursor ORDER BY id LIMIT :limit`
-- Retornar `next_cursor` na resposta
-
-**Resposta padrão:**
-```json
-{
-  "data": [...],
-  "pagination": {
-    "next_cursor": "base64-encoded-id",
-    "has_more": true
-  }
-}
-```
-
----
-
-### 3.2 CQRS Básico
-**Arquivos:** `internal/core/ports/`, `adapters/outbound/persistence/`
-
-Separar read (queries) de write (commands).
-
-**Ação:**
-- Manter `EstablishmentRepository` para commands (Create, Update, Delete)
-- Criar `EstablishmentQueryRepository` para queries (GetByID, GetBySlug, List)
-- Queries podem apontar para read replicas no futuro
-- Use cases usam a interface appropriate
-
----
-
-### 3.3 Read Replica Support
-**Arquivo:** `docker-compose.yml`, `internal/infra/database/database.go`
-
-**Ação:**
-- Adicionar segundo container PostgreSQL como replica
-- Configurar `DB_READ_HOST` / `DB_WRITE_HOST`
-- Queries readonly usam `DB_READ_HOST`
-- Commands usam `DB_WRITE_HOST`
-
----
-
-### 3.4 OpenTelemetry Tracing
-**Ação:**
-- Adicionar `go.opentelemetry.io/otel`
-- Middleware no Gin para tracing de requests
-- Spans em:
-  - HTTP handlers
-  - Use cases
-  - Repository methods
-- Exportar para Jaeger/Zipkin
-
----
-
-### 3.5 Value Objects Properly Implemented
-**Arquivos:** `internal/core/domain/address.go`, `location.go`, `phone.go`
-
-Address, Location e Phone devem ter semantics de Value Object.
-
-**Ação:**
-- `Address`, `Location`, `Phone` devem ser imutáveis após criação
-- Métodos de comparação: `Equals(other Address) bool`
-- `Phone` deve validar formato (E.164: `+55-11-99999-9999`)
-- Considerar usar `ValueObject[T]` genérico do pacote `domain/valueobject`
-
----
-
-## FASE 4 — Modernização
-
-### 4.1 Graceful Shutdown
-**Arquivo:** `cmd/api/main.go`
-
-**Ação:**
-- Capturar sinais `SIGTERM`, `SIGINT`
-- Parar de aceitar novos requests
-- Finalizar requests em andamento (com timeout)
-- Fechar conexões: DB pool, cache, listener
-
-**Implementação:**
-```go
-signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
-<-ch
-ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-defer cancel()
-server.Shutdown(ctx)
-app.Close()
+go build ./...     ✅
+go vet ./...       ✅
+gofmt -l .         ✅ (limpo)
+go test ./...      ✅
+sqlc generate      ✅ (idempotente)
 ```
 
----
+#### Pendências identificadas (não resolvidas nesta sessão)
 
-### 4.2 Migrate Tool
-**Arquivo:** `docker-compose.yml`
+- `HealthUseCase` continua como stub, sem rota `/health`
+- Repository não usa transações em Create/Update (Fase 1.3 do `.roadmap`)
+- Sem error wrapping consistente
+- Sem testes unitários para o `CachedRepository` (próxima prioridade sugerida)
+- Hardcoded `cacheTTL` em `config.go` ainda é `int` (em segundos); poderia ser `time.Duration`
 
-Migrar de `migrate/migrate` para `golang-migrate/migrate` ou `sql-migrate`.
+#### Lições
 
-**Ação:**
-- Usar `golang-migrate/migrate` que é mais idiático em Go
-- Manter compatibilidade com queries SQL existentes
+- **Decorator Pattern exigiu completude**: um decorator parcial não pode ser wireado, ou quebra a build, ou pior — compila mas não cacheia o que deveria
+- **Hexagonal força disciplina**: `ports.Cache` receber `DeletePattern` foi a saída para manter o decorator agnóstico de Redis
+- **Bugs latentes em código "morto"**: `RowToEstablishment` tinha bug grave (quebrava timestamps) que só apareceria se fosse usado — o tipo de bug que testes detectariam
 
----
+#### Commits sugeridos
 
-### 4.3 Dependency Injection com Wire
-**Arquivo:** `internal/infra/app/app.go`
+Ao final desta sessão, separaria em commits atômicos:
 
-**Ação:**
-- Instalar `google/wire`
-- Criar `wire.go` comwire.Inject
-- Gerar código de DI automaticamente
-- Eliminar inicialização manual em `NewApp()`
+1. `refactor(dto): fix EstablishmentDBRow helpers, propagate unmarshal errors`
+2. `refactor(repo): use DTO helpers in establishment_repository, remove duplication`
+3. `feat(cache): add DeletePattern to Cache port and ValkeyClient`
+4. `refactor(cache): complete CachedRepository to satisfy EstablishmentRepository`
+5. `refactor(app): wire CachedRepository decorator with configurable TTL`
+6. `refactor(usecase): remove unused cache parameter from use cases`
+7. `docs(todo): mark etapa 4 as complete`
 
----
-
-### 4.4 Event Sourcing Básico
-**Arquivos:** `internal/core/domain/`, `internal/core/events/`
-
-Emitir eventos de domínio para audit trail.
-
-**Ação:**
-- Criar pacote `events`
-- Definir eventos: `EstablishmentCreated`, `EstablishmentUpdated`, `EstablishmentDeleted`
-- Interface `EventPublisher` no ports
-- Implementar com `github.com/segmentio/kafka-go` ou `nsq`
-
----
-
-### 4.5 Input DTOs e Output DTOs
-**Ação:**
-- `CreateEstablishmentInput` → validado no handler
-- `CreateEstablishmentOutput` → expõe apenas campos relevantes para o cliente
-- Não expor entidades de domínio diretamente via API
-
----
-
-### 4.6 API Versioning e Pagination Global
-**Arquivo:** `internal/adapters/inbound/http/`
-
-**Ação:**
-- Padronizar resposta:
-```json
-{
-  "data": [...],
-  "meta": {
-    "page": 1,
-    "per_page": 20,
-    "total": 100,
-    "total_pages": 5
-  }
-}
-```
-- Adicionar headers: `X-Pagination-Cursor`, `X-Total-Count`
-
----
-
-## CHECKLIST DE IMPLEMENTAÇÃO
-
-### Fase 1 — Crítico
-- [ ] Implementar `List()` com filtros
-- [ ] Corrigir cache-aside pattern (read + write)
-- [ ] Adicionar transactions em Create/Update
-- [ ] Extrair `rowToEstablishment()` privado
-
-### Fase 2 — Qualidade
-- [ ] Adicionar validation library
-- [ ] Migrar para structured logging (zerolog/zap)
-- [ ] Implementar error wrapping consistente
-- [ ] Criar health endpoint real
-- [ ] Slug factory com verificação de duplicidade
-
-### Fase 3 — Escalabilidade
-- [ ] Implementar cursor-based pagination
-- [ ] Separar query e command repositories
-- [ ] Configurar read replicas
-- [ ] Adicionar OpenTelemetry tracing
-- [ ] Implementar Value Objects corretamente
-
-### Fase 4 — Modernização
-- [ ] Implementar graceful shutdown
-- [ ] Migrar para golang-migrate
-- [ ] Configurar Wire para DI
-- [ ] Adicionar event sourcing básico
-- [ ] Separar Input/Output DTOs
-- [ ] Padronizar API response format
-
----
-
-## NOTAS
-
-- **FASE 1 é obrigatória** antes de qualquer produção
-- **FASE 2 pode ser feita em paralelo** com desenvolvimento de features
-- **FASE 3 é para escalar** quando necessário
-- **FASE 4 é técnico** e pode ser implementado gradualmente
-
----
-
-## ERROS A SEREM CRIADOS
-
-### Domain Errors (já existem em `errors.go`)
-```
-ErrInvalidName
-ErrInvalidTypes
-ErrInvalidLocation
-ErrInvalidPhone
-ErrInvalidAddress
-ErrInvalidTimezone
-ErrBlankEmailAndWebsite
-ErrEstablishmentNotFound
-```
-
-### Novos erros a adicionar
-```
-ErrInvalidSlugFormat
-ErrDuplicateSlug
-ErrInvalidEmailFormat
-ErrInvalidPhoneFormat
-ErrInvalidCoordinate
-```
-
----
-
-## FONTES
-
-- Clean Architecture: https://blog.cleancoder.com/uncle-bob/2012/08/08/the-clean-architecture.html
-- Go Project Layout: https://github.com/golang-standards/project-layout
-- Hexagonal Architecture: https://alistair.cockburn.us/hexagonal-architecture/
-- Cache-Aside Pattern: https://docs.microsoft.com/en-us/azure/architecture/patterns/cache-aside
-- Cursor Pagination: https://dev.to/przpiw/cursor-based-pagination-fgf
