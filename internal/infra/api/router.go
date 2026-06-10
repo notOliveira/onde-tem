@@ -17,6 +17,7 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 		establishments := v1.Group("/establishments")
 		{
 			establishments.POST("", cfg.EstablishmentHandler.HandleCreate)
+			establishments.GET("", cfg.EstablishmentHandler.HandleList)
 		}
 	}
 

@@ -9,10 +9,16 @@ import (
 
 type EstablishmentHandler struct {
 	createUC *usecase.CreateEstablishmentUseCase
+	listUC   *usecase.ListEstablishmentsUseCase
 }
 
-func NewEstablishmentHandler(createUC *usecase.CreateEstablishmentUseCase) *EstablishmentHandler {
-	return &EstablishmentHandler{createUC: createUC}
+func NewEstablishmentHandler(
+	createUC *usecase.CreateEstablishmentUseCase,
+	listUC *usecase.ListEstablishmentsUseCase) *EstablishmentHandler {
+	return &EstablishmentHandler{
+		createUC: createUC,
+		listUC:   listUC,
+	}
 }
 
 type createRequest struct {
@@ -34,12 +40,14 @@ type createRequest struct {
 	} `json:"location"`
 }
 
-func (h *EstablishmentHandler) HandleCreate(c *gin.Context) {
+type listRequest struct {
+	Types  []string `form:"types"`
+	Search string   `form:"search"`
+	Limit  int      `form:"limit,default=20"`
+	Offset int      `form:"offset,default=0"`
+}
 
-	if c.Request.Method != http.MethodPost {
-		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "method not allowed"})
-		return
-	}
+func (h *EstablishmentHandler) HandleCreate(c *gin.Context) {
 
 	var req createRequest
 
@@ -91,4 +99,32 @@ func (h *EstablishmentHandler) HandleCreate(c *gin.Context) {
 		"slug":    result.Slug().String(),
 		"message": "Establishment created successfully",
 	})
+}
+
+func (h *EstablishmentHandler) HandleList(c *gin.Context) {
+
+	var req listRequest
+
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query parameters", "details": err.Error()})
+		return
+	}
+
+	filter := &domain.EstablishmentFilter{
+		Types:  req.Types,
+		Search: req.Search,
+		Limit:  req.Limit,
+		Offset: req.Offset,
+	}
+
+	establishments, err := h.listUC.Execute(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"establishments": establishments,
+	})
+
 }
