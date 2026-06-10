@@ -71,7 +71,7 @@ reset:
 	@echo ✅ Dependencies downloaded
 
 	@echo.
-	@echo ⚙️  3/8 Generating database code (sqlc)...
+	@echo ⚙️ 3/8 Generating database code (sqlc)...
 	@sqlc generate || (echo ❌ sqlc generation failed & exit 1)
 	@echo ✅ Code generated
 
@@ -81,7 +81,7 @@ reset:
 	@echo ✅ Code formatted
 
 	@echo.
-	@echo 🏗️  5/8 Building fresh images...
+	@echo 🏗️ 5/8 Building fresh images...
 	@docker compose build || (echo ❌ Build failed & exit 1)
 	@echo ✅ Images built
 
@@ -91,7 +91,7 @@ reset:
 	@echo ✅ Database is up and healthy
 
 	@echo.
-	@echo 🛠️  7/8 Running migrations...
+	@echo 🛠️ 7/8 Running migrations...
 	@docker compose run --rm migrate up || (echo ❌ Migrations failed & exit 1)
 	@echo ✅ Database migrated
 
