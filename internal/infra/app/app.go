@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	inboundHttp "github.com/notOliveira/onde-tem/internal/adapters/inbound/http"
@@ -28,14 +30,25 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
+	// Initialize outbound adapters
 	valkeyClient := cache.NewValkeyClient(cfg.ValkeyAddr)
 
+	// Initialize repositories
 	queries := sqlc.New(connPool)
 	repo := postgres.NewEstablishmentRepository(queries)
+	cachedRepo := cache.NewCachedRepository(repo, valkeyClient, time.Duration(cfg.CacheTTL)*time.Second)
 
-	createUC := usecase.NewCreateEstablishmentUseCase(repo, valkeyClient)
-	handler := inboundHttp.NewEstablishmentHandler(createUC)
+	// Initialize use cases
+	createUC := usecase.NewCreateEstablishmentUseCase(cachedRepo)
+	listUC := usecase.NewListEstablishmentsUseCase(cachedRepo)
 
+	// Initialize handlers
+	handler := inboundHttp.NewEstablishmentHandler(
+		createUC,
+		listUC,
+	)
+
+	// Initialize router
 	router := api.NewRouter(api.RouterConfig{
 		EstablishmentHandler: handler,
 	})
