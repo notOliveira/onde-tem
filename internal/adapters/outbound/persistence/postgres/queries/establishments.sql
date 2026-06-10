@@ -77,6 +77,38 @@ SET
     updated_at = @updated_at
 WHERE id = @id;
 
+-- name: ListEstablishments :many
+SELECT
+    id,
+    name,
+    slug,
+    types,
+    email,
+    website,
+    timezone,
+    phones,
+    address,
+    CAST(ST_Y(location::geometry) AS double precision) AS lat,
+    CAST(ST_X(location::geometry) AS double precision) AS lon,
+    created_at,
+    updated_at
+FROM establishments
+WHERE
+    (
+        @types::text[] IS NULL
+        OR types && @types::text[]
+    )
+    AND (
+        @search::text IS NULL
+        OR @search::text = ''
+        OR name ILIKE '%' || @search::text || '%'
+        OR slug ILIKE '%' || @search::text || '%'
+    )
+ORDER BY created_at DESC
+LIMIT $1
+OFFSET $2;
+
+
 -- name: DeleteEstablishment :exec
 DELETE FROM establishments
 WHERE id = $1;

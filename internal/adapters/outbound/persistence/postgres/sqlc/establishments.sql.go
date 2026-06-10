@@ -198,6 +198,100 @@ func (q *Queries) GetEstablishmentBySlug(ctx context.Context, slug string) (GetE
 	return i, err
 }
 
+const listEstablishments = `-- name: ListEstablishments :many
+SELECT
+    id,
+    name,
+    slug,
+    types,
+    email,
+    website,
+    timezone,
+    phones,
+    address,
+    CAST(ST_Y(location::geometry) AS double precision) AS lat,
+    CAST(ST_X(location::geometry) AS double precision) AS lon,
+    created_at,
+    updated_at
+FROM establishments
+WHERE
+    (
+        $3::text[] IS NULL
+        OR types && $3::text[]
+    )
+    AND (
+        $4::text IS NULL
+        OR $4::text = ''
+        OR name ILIKE '%' || $4::text || '%'
+        OR slug ILIKE '%' || $4::text || '%'
+    )
+ORDER BY created_at DESC
+LIMIT $1
+OFFSET $2
+`
+
+type ListEstablishmentsParams struct {
+	Limit  int32    `json:"limit"`
+	Offset int32    `json:"offset"`
+	Types  []string `json:"types"`
+	Search string   `json:"search"`
+}
+
+type ListEstablishmentsRow struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	Types     []string  `json:"types"`
+	Email     string    `json:"email"`
+	Website   string    `json:"website"`
+	Timezone  string    `json:"timezone"`
+	Phones    []byte    `json:"phones"`
+	Address   []byte    `json:"address"`
+	Lat       float64   `json:"lat"`
+	Lon       float64   `json:"lon"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (q *Queries) ListEstablishments(ctx context.Context, arg ListEstablishmentsParams) ([]ListEstablishmentsRow, error) {
+	rows, err := q.db.Query(ctx, listEstablishments,
+		arg.Limit,
+		arg.Offset,
+		arg.Types,
+		arg.Search,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEstablishmentsRow
+	for rows.Next() {
+		var i ListEstablishmentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Types,
+			&i.Email,
+			&i.Website,
+			&i.Timezone,
+			&i.Phones,
+			&i.Address,
+			&i.Lat,
+			&i.Lon,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateEstablishment = `-- name: UpdateEstablishment :exec
 UPDATE establishments
 SET

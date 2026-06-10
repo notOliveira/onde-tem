@@ -15,6 +15,7 @@ type Querier interface {
 	DeleteEstablishment(ctx context.Context, id uuid.UUID) error
 	GetEstablishmentByID(ctx context.Context, id uuid.UUID) (GetEstablishmentByIDRow, error)
 	GetEstablishmentBySlug(ctx context.Context, slug string) (GetEstablishmentBySlugRow, error)
+	ListEstablishments(ctx context.Context, arg ListEstablishmentsParams) ([]ListEstablishmentsRow, error)
 	UpdateEstablishment(ctx context.Context, arg UpdateEstablishmentParams) error
 }
 
