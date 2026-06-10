@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"strings"
 )
 
@@ -47,6 +48,27 @@ func NewAddress(street, number, district, city, state, country, zipCode string) 
 	}
 
 	return address, nil
+}
+
+func (a Address) MarshalJSON() ([]byte, error) {
+	type Alias Address
+	return json.Marshal(struct {
+		Street   string `json:"street"`
+		Number   string `json:"number"`
+		District string `json:"district"`
+		City     string `json:"city"`
+		State    string `json:"state"`
+		Country  string `json:"country"`
+		ZipCode  string `json:"zipCode"`
+	}{
+		Street:   a.street,
+		Number:   a.number,
+		District: a.district,
+		City:     a.city,
+		State:    a.state,
+		Country:  a.country,
+		ZipCode:  a.zipCode,
+	})
 }
 
 func (a Address) Street() string   { return a.street }

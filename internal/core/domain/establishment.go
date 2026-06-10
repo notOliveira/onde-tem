@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 )
@@ -261,4 +262,22 @@ func RehydrateEstablishment(
 		createdAt: createdAt,
 		updatedAt: updatedAt,
 	}
+}
+
+// MarshalJSON customizes the JSON representation of the Establishment struct, ensuring that all fields are included in the output.
+func (e Establishment) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"id":        e.ID().String(),
+		"name":      e.Name(),
+		"slug":      e.Slug().String(),
+		"types":     e.EstablishmentTypes(),
+		"email":     e.Email(),
+		"website":   e.Website(),
+		"phones":    e.Phones(),
+		"location":  e.Location(),
+		"address":   e.Address(),
+		"timezone":  e.Timezone(),
+		"createdAt": e.CreatedAt(),
+		"updatedAt": e.UpdatedAt(),
+	})
 }

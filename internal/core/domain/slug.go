@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
@@ -64,4 +65,8 @@ func removeAccents(input string) string {
 
 func (s Slug) String() string {
 	return string(s)
+}
+
+func (s Slug) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }

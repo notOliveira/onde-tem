@@ -1,6 +1,9 @@
 package domain
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+)
 
 var ErrInvalidEstablishmentID = errors.New("invalid establishment id")
 
@@ -11,6 +14,10 @@ func ParseEstablishmentID(value string) (EstablishmentID, error) {
 		return "", ErrInvalidEstablishmentID
 	}
 	return EstablishmentID(value), nil
+}
+
+func (id EstablishmentID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(id.String())
 }
 
 func (id EstablishmentID) String() string {
