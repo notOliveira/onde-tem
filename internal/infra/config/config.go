@@ -1,8 +1,10 @@
 package config
 
 import (
-	"github.com/notOliveira/onde-tem/internal/infra/logger"
 	"os"
+	"strconv"
+
+	"github.com/notOliveira/onde-tem/internal/infra/logger"
 )
 
 type Config struct {
@@ -15,15 +17,19 @@ func LoadConfig() *Config {
 	host := os.Getenv("VALKEY_HOST")
 	port := os.Getenv("VALKEY_PORT")
 	server := os.Getenv("SERVER_PORT")
-
 	if server != "" && server[0] != ':' {
 		server = ":" + server
+	}
+	cacheTTL := os.Getenv("CACHE_TTL_SECONDS")
+	cacheTTLInt, err := strconv.Atoi(cacheTTL)
+	if err != nil || cacheTTLInt <= 0 {
+		cacheTTLInt = 600
 	}
 
 	return &Config{
 		ServerPort: server,
 		ValkeyAddr: host + ":" + port,
-		CacheTTL:   600, // 10 minutes
+		CacheTTL:   cacheTTLInt,
 	}
 }
 
