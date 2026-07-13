@@ -1,5 +1,7 @@
 package domain
 
+import "encoding/json"
+
 // Location represents the geographical coordinates (latitude and longitude) of an establishment.
 type Location struct {
 	lat float64
@@ -22,6 +24,17 @@ func (l Location) IsValid() bool {
 		return false
 	}
 	return true
+}
+
+func (l Location) MarshalJSON() ([]byte, error) {
+	type Alias Location
+	return json.Marshal(struct {
+		Lat float64 `json:"lat"`
+		Lon float64 `json:"lon"`
+	}{
+		Lat: l.lat,
+		Lon: l.lon,
+	})
 }
 
 func (l Location) Lat() float64 { return l.lat }

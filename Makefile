@@ -20,25 +20,30 @@ sanity:
 
 	@echo.
 	@echo 🐘 Checking Postgres container...
-	@docker compose ps db | findstr "Up" > NUL || (echo ❌ Postgres container is NOT running & exit 1)
+	@docker compose ps db --format "{{.State}}" | findstr "running" > NUL || (echo ❌ Postgres container is NOT running & exit 1)
 	@echo ✅ Postgres container is up
 
 	@echo.
 	@echo 📡 Checking Postgres connection...
-	@docker compose exec db pg_isready -U ${DB_USER} || (echo ❌ Postgres not accepting connections & exit 1)
+	@docker compose exec db pg_isready -U $(DB_USER) || (echo ❌ Postgres not accepting connections & exit 1)
+	@echo ✅ Postgres connection OK
 
 	@echo.
 	@echo 🧱 Checking migration version...
 	@docker compose run --rm migrate version || (echo ❌ Migration check failed & exit 1)
 
 	@echo.
-	@echo ⚙️ Running sqlc generate...
+	@echo ⚙️  Running sqlc generate...
 	@sqlc generate || (echo ❌ sqlc failed & exit 1)
 	@echo ✅ sqlc OK
 
 	@echo.
+	@echo 📏 Running gofmt check...
+	@gofmt -l . | findstr "^" > NUL && (echo ❌ Files not formatted! Run "make reset" & exit 1) || echo ✅ Code formatting OK
+
+	@echo.
 	@echo 🧪 Running tests...
-	@go test ./... || (echo ❌ Tests failing & exit 1)
+	@go test -v ./... || (echo ❌ Tests failing & exit 1)
 
 	@echo.
 	@echo ================================
@@ -50,11 +55,56 @@ sanity:
 # Docker
 # =========================
 
-reset-all:
-	docker compose down -v --rmi all --remove-orphans
-	docker compose build
-	docker compose run migrate up
-	sqlc generate
+reset:
+	@echo =========================================
+	@echo  ☢️  NUCLEAR RESET STARTING
+	@echo =========================================
+
+	@echo.
+	@echo 🧹 1/8 Destroying old environment...
+	@docker compose down -v --rmi all --remove-orphans || (echo ❌ Teardown failed & exit 1)
+	@echo ✅ Environment cleaned
+
+	@echo.
+	@echo 📦 2/8 Downloading dependencies...
+	@go mod tidy || (echo ❌ Dependency download failed & exit 1)
+	@echo ✅ Dependencies downloaded
+
+	@echo.
+	@echo ⚙️ 3/8 Generating database code (sqlc)...
+	@sqlc generate || (echo ❌ sqlc generation failed & exit 1)
+	@echo ✅ Code generated
+
+	@echo.
+	@echo 📏 4/8 Formatting code...
+	@gofmt -w . || (echo ❌ Code formatting failed & exit 1)
+	@echo ✅ Code formatted
+
+	@echo.
+	@echo 🏗️ 5/8 Building fresh images...
+	@docker compose build || (echo ❌ Build failed & exit 1)
+	@echo ✅ Images built
+
+	@echo.
+	@echo 🐘 6/8 Starting database...
+	@docker compose up -d db --wait || (echo ❌ Failed to start database & exit 1)
+	@echo ✅ Database is up and healthy
+
+	@echo.
+	@echo 🛠️ 7/8 Running migrations...
+	@docker compose run --rm migrate up || (echo ❌ Migrations failed & exit 1)
+	@echo ✅ Database migrated
+
+	@echo.
+	@echo 🚀 8/8 Starting all remaining services...
+	@docker compose up -d || (echo ❌ Failed to start services & exit 1)
+	@echo ✅ All services running
+
+	@echo.
+	@echo =========================================
+	@echo  ✅ ENVIRONMENT RESET COMPLETE
+	@echo =========================================
+	
 
 up:
 	docker compose up -d
@@ -135,6 +185,17 @@ tidy:
 
 db-shell:
 	docker compose exec db psql -U ${DB_USER} -d ${DB_NAME}
+
+# =========================
+# ERD
+# =========================
+
+erd-up:
+	npx serve erd-dist/ -p 3000
+
+erd-gen:
+	liam erd build --input "migrations/*.up.sql" --format postgres --output-dir "erd-dist"
+
 
 # =========================
 # Production build

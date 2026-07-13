@@ -2,13 +2,11 @@
 
 System to find information about establishments, enriched with collaborative informations.
 
---
-
 ## Terminal commands
 
 Reset all application & run migrations (Recommended for first-time run or if you're lost)
 ```bash
-make reset-all
+make reset
 ```
 
 Build the images and start the containers:
@@ -206,4 +204,44 @@ Build Linux binary:
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/api ./cmd/api
 # Or
 make build-bin
+```
+
+---
+
+## ERD (Entity Relationship Diagram)
+
+Visualize the database schema using Liam ERD.
+
+### Prerequisites
+
+Install Liam CLI globally:
+```bash
+npm install -g @liam-hq/cli
+```
+
+### Generate ERD from migrations
+
+Build the ERD from SQL migration files:
+```bash
+make erd-gen
+# Or
+liam erd build --input "migrations/*.up.sql" --format postgres --output-dir "erd-dist"
+```
+
+### View the ERD
+
+Serve the ERD locally (required due to browser security):
+```bash
+make erd-up
+# Or
+npx serve erd-dist/ -p 3000
+```
+
+Then open **http://localhost:3000** in your browser.
+
+### Clean up
+
+Remove generated ERD files:
+```bash
+rm -rf erd-dist/
 ```

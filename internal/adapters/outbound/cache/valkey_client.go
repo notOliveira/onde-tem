@@ -33,3 +33,28 @@ func (v *ValkeyClient) Set(ctx context.Context, key string, value string, ttl ti
 func (v *ValkeyClient) Delete(ctx context.Context, key string) error {
 	return v.client.Del(ctx, key).Err()
 }
+
+func (v *ValkeyClient) DeletePattern(ctx context.Context, pattern string) error {
+	const batchSize = 100
+	iter := v.client.Scan(ctx, 0, pattern, batchSize).Iterator()
+
+	batch := make([]string, 0, batchSize)
+	for iter.Next(ctx) {
+		batch = append(batch, iter.Val())
+		if len(batch) >= batchSize {
+			if err := v.client.Del(ctx, batch...).Err(); err != nil {
+				return err
+			}
+			batch = batch[:0]
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
+	if len(batch) > 0 {
+		if err := v.client.Del(ctx, batch...).Err(); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 )
@@ -176,7 +177,7 @@ func (e *Establishment) RemovePhone(countryCode, number string) {
 	}
 }
 
-// UpdateAddress updates the address of the establishment.
+// UpdateLocation updates the location of the establishment.
 func (e *Establishment) UpdateLocation(location Location) error {
 	if !location.IsValid() {
 		return ErrInvalidLocation
@@ -187,6 +188,25 @@ func (e *Establishment) UpdateLocation(location Location) error {
 }
 
 // UpdateAddress updates the address of the establishment.
+func (e *Establishment) UpdateAddress(address Address) error {
+	newAddress, err := NewAddress(
+		address.street,
+		address.number,
+		address.district,
+		address.city,
+		address.state,
+		address.country,
+		address.zipCode,
+	)
+	if err != nil {
+		return err
+	}
+	e.address = newAddress
+	e.updatedAt = time.Now()
+	return nil
+}
+
+// UpdateTimezone updates the timezone of the establishment.
 func (e *Establishment) UpdateTimezone(timezone string) error {
 	_, err := time.LoadLocation(timezone)
 	if err != nil {
@@ -210,4 +230,54 @@ func (e *Establishment) SetTypes(types []EstablishmentType) error {
 	e.types = types
 	e.updatedAt = time.Now()
 	return nil
+}
+
+// RehydrateEstablishment is used strictly by repositories to restore an entity from the database state.
+// It skips business validations meant for creation and preserves database timestamps.
+func RehydrateEstablishment(
+	id EstablishmentID,
+	name string,
+	slug Slug,
+	types []EstablishmentType,
+	email string,
+	website string,
+	phones []Phone,
+	location Location,
+	address Address,
+	timezone string,
+	createdAt time.Time,
+	updatedAt time.Time,
+) *Establishment {
+	return &Establishment{
+		id:        id,
+		name:      name,
+		slug:      slug,
+		types:     types,
+		email:     email,
+		website:   website,
+		phones:    phones,
+		location:  location,
+		address:   address,
+		timezone:  timezone,
+		createdAt: createdAt,
+		updatedAt: updatedAt,
+	}
+}
+
+// MarshalJSON customizes the JSON representation of the Establishment struct, ensuring that all fields are included in the output.
+func (e Establishment) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"id":        e.ID().String(),
+		"name":      e.Name(),
+		"slug":      e.Slug().String(),
+		"types":     e.EstablishmentTypes(),
+		"email":     e.Email(),
+		"website":   e.Website(),
+		"phones":    e.Phones(),
+		"location":  e.Location(),
+		"address":   e.Address(),
+		"timezone":  e.Timezone(),
+		"createdAt": e.CreatedAt(),
+		"updatedAt": e.UpdatedAt(),
+	})
 }

@@ -10,3 +10,7 @@ dist/
 .idea/
 .vscode/
 notebook.md
+.annotations
+.roadmap
+.sessions
+/docs/architecture/

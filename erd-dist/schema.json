@@ -1,0 +1,157 @@
+{
+  "tables": {
+    "establishments": {
+      "name": "establishments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "types": {
+          "name": "types",
+          "type": "text",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "phones": {
+          "name": "phones",
+          "type": "jsonb",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "address": {
+          "name": "address",
+          "type": "jsonb",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "location": {
+          "name": "location",
+          "type": "geography",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "default": null,
+          "check": null,
+          "notNull": true,
+          "comment": null
+        }
+      },
+      "comment": null,
+      "indexes": {
+        "idx_establishments_slug": {
+          "name": "idx_establishments_slug",
+          "unique": false,
+          "columns": [
+            "slug"
+          ],
+          "type": "btree"
+        },
+        "idx_establishments_types": {
+          "name": "idx_establishments_types",
+          "unique": false,
+          "columns": [
+            "types"
+          ],
+          "type": "gin"
+        },
+        "idx_establishments_location": {
+          "name": "idx_establishments_location",
+          "unique": false,
+          "columns": [
+            "location"
+          ],
+          "type": "gist"
+        }
+      },
+      "constraints": {
+        "establishments_pkey": {
+          "type": "PRIMARY KEY",
+          "name": "establishments_pkey",
+          "columnNames": [
+            "id"
+          ]
+        },
+        "establishments_slug_key": {
+          "type": "UNIQUE",
+          "name": "establishments_slug_key",
+          "columnNames": [
+            "slug"
+          ]
+        }
+      }
+    }
+  },
+  "enums": {},
+  "extensions": {
+    "postgis": {
+      "name": "postgis"
+    },
+    "uuid-ossp": {
+      "name": "uuid-ossp"
+    }
+  }
+}

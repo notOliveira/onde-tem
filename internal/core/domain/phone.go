@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"strings"
 )
 
@@ -31,6 +32,19 @@ func NewPhone(countryCode, number, label string) (Phone, error) {
 	}
 
 	return phone, nil
+}
+
+func (p Phone) MarshalJSON() ([]byte, error) {
+	type Alias Phone
+	return json.Marshal(struct {
+		CountryCode string `json:"countryCode"`
+		Number      string `json:"number"`
+		Label       string `json:"label"`
+	}{
+		CountryCode: p.countryCode,
+		Number:      p.number,
+		Label:       p.label,
+	})
 }
 
 func (p Phone) CountryCode() string { return p.countryCode }

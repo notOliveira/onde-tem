@@ -6,8 +6,8 @@ import (
 )
 
 type EstablishmentRepository interface {
-	Create(ctx context.Context, establishment *domain.Establishment) error
-	Update(ctx context.Context, establishment *domain.Establishment) error
+	Create(ctx context.Context, e *domain.Establishment) error
+	Update(ctx context.Context, e *domain.Establishment) error
 	Delete(ctx context.Context, id domain.EstablishmentID) error
 	GetByID(ctx context.Context, id domain.EstablishmentID) (*domain.Establishment, error)
 	GetBySlug(ctx context.Context, slug domain.Slug) (*domain.Establishment, error)
