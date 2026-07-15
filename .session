@@ -1,0 +1,260 @@
+# .session — Plano de Aprendizado: Testes Unitários em Go
+
+> Documento de contexto para retomar a sessão. **NÃO É DOCUMENTAÇÃO DO PROJETO** — é só referência pessoal para o roadmap de aprendizado de testes.
+>
+> **Playbook completo em `/todo.md`** (raiz). Aqui ficam só as notas voláteis da sessão.
+
+---
+
+## Contexto
+
+Projeto: `github.com/notOliveira/onde-tem` (Go 1.26)
+Stack: Gin + PostgreSQL (sqlc) + Valkey/Redis
+Arquitetura: Hexagonal (Ports & Adapters)
+
+Estrutura relevante:
+```
+internal/
+├── core/
+│   ├── domain/      ← entidades puras (sem dependências)
+│   ├── ports/       ← interfaces (EstablishmentRepository, Cache)
+│   └── usecase/     ← regras de aplicação
+├── adapters/
+│   ├── inbound/http/      ← handlers Gin
+│   ├── outbound/persistence/postgres/
+│   ├── outbound/cache/    ← repo com cache (decorator) + valkey
+│   └── dto/               ← mapeamentos DB/cache ↔ domain
+└── infra/           ← config, logger, router, database, app
+```
+
+Estado dos testes: **ZERO** (`_test.go`). `make test` apenas roda `go test ./...`.
+
+---
+
+## Decisões acordadas com o usuário
+
+| Pergunta | Resposta |
+|---|---|
+| Biblioteca de asserts/mocks | **testify/assert + testify/mock** |
+| Onde começar | **Nível 1: Value Objects** |
+| Como conduzir | **Eu guio, o usuário escreve** |
+| Escopo desta rodada | **Só Nível 1** (parar para sentir o sabor) |
+
+---
+
+## Roteiro Geral (do fácil ao difícil)
+
+### 🟢 Nível 1 — Value Objects do Domínio *(rodada atual)*
+`establishment_id`, `establishment_type`, `phone`, `address`, `location`, `slug`.
+
+### 🟡 Nível 2 — Entidade rica (`Establishment`)
+`NewEstablishment`, `UpdateName`, `UpdateContact`, `AddPhone`, `RemovePhone`, `UpdateLocation`, `UpdateAddress`, `UpdateTimezone`, `SetTypes`, `MarshalJSON`, `RehydrateEstablishment`.
+Conceito novo: **table-driven tests**.
+
+### 🟠 Nível 3 — Use Cases com Mocks das Ports
+`create_establishment`, `list_establishments`, `health`.
+Conceito novo: **mocks** (manuais ou testify/mock).
+
+### 🟧 Nível 4 — DTOs (mapeamentos)
+`phone_dto`, `location_dto`, `address_dto`, `establishment_cache`, `establishment_db_row`.
+Conceitos: `t.Run` subtests, fixtures, `t.Cleanup()`.
+
+### 🔴 Nível 5 — Cached Repository (decorator)
+Comportamento de cache hit/miss, invalidação, `generateListCacheKey`.
+Conceito novo: **spies**, verificação de argumentos.
+
+### 🟣 Nível 6 — HTTP Handlers (Gin)
+Testes com `httptest`, `gin.SetMode(gin.TestMode)`, mock de use cases.
+
+### ❌ Fora de escopo
+- Testes de banco (precisariam `testcontainers-go` ou `pgxmock`)
+- Testes do Redis/Valkey (precisariam `miniredis`)
+- Logger / Config (código trivial)
+
+---
+
+## Nível 1 — Detalhamento Completo
+
+### Setup inicial
+```bash
+go get github.com/stretchr/testify
+```
+
+Cada `*_test.go` fica na **mesma pasta** do arquivo testado.
+
+**Decisão de pacote:** usar `package domain_test` (externo, sufixo `_test`) — força o uso da API pública via getters e detecta bugs na interface pública. Campos são não-exportados (minúsculos), então não-exportados só são acessíveis via getters.
+
+### Conceitos Go a absorver no Nível 1
+
+| Conceito | Onde aparece |
+|---|---|
+| `func TestX(t *testing.T)` | base de tudo |
+| `t.Run("nome", func(t *testing.T) {...})` | subtests no slug e location |
+| Table-driven tests | location, slug |
+| `assert.Equal`, `assert.NotNil`, `assert.ErrorIs`, `assert.NoError` | API pública do testify |
+| `package domain_test` (externo) vs `package domain` (interno) | decisão de design |
+
+### Arquivos a criar (em ordem pedagógica)
+
+#### 1. `establishment_id_test.go`
+Único construtor, único erro.
+
+Casos:
+- `ParseEstablishmentID("")` → erro `ErrInvalidEstablishmentID`
+- `ParseEstablishmentID("qualquer-coisa")` → retorna ID com mesmo valor, `nil`
+- `id.String()` retorna o valor original
+- `MarshalJSON` produz JSON com aspas (string JSON)
+
+Funções expostas: `ParseEstablishmentID`, `String`, `MarshalJSON`. Erro: `ErrInvalidEstablishmentID`.
+
+#### 2. `establishment_type_test.go`
+Quase um sanity check, ótimo para se acostumar com `t.Run` aninhado.
+
+Casos:
+- `EstablishmentType("restaurant").String()` → `"restaurant"`
+- A constante `EstablishmentTypeRestaurant` tem valor `"restaurant"`
+
+#### 3. `phone_test.go`
+Validação: número não pode ser vazio (após trim).
+
+Funções expostas: `NewPhone`, `CountryCode`, `Number`, `Label`, `MarshalJSON`. Erro: `ErrInvalidPhone`.
+
+Casos:
+- `NewPhone("", "", "")` → erro
+- `NewPhone("", "  ", "")` → erro (espaços viram vazio)
+- `NewPhone("+55", "11999998888", "WhatsApp")` → sucesso, getters retornam valores
+- `NewPhone("  +55  ", "  11999998888  ", "  Zap  ")` → sucesso **e** getters retornam valores **trimados**
+- `MarshalJSON` produz `{"countryCode":"...","number":"...","label":"..."}`
+
+#### 4. `address_test.go`
+Mesma lógica do phone, mais campos obrigatórios.
+
+Funções expostas: `NewAddress`, `Street`, `Number`, `District`, `City`, `State`, `Country`, `ZipCode`, `MarshalJSON`. Erro: `ErrInvalidAddress`.
+
+Campos obrigatórios (vide `address.go:19`): `street`, `city`, `state`, `country`, `zipCode`.
+
+Casos:
+- Todos os obrigatórios vazios → erro
+- Só `street` preenchido → erro (faltam os outros)
+- `street=" "` → erro (trim)
+- Todos obrigatórios preenchidos → sucesso
+- `number` e `district` podem ser vazios (não são obrigatórios)
+- Verificar que **todos os getters** retornam valor (não struct zero)
+- Verificar que `MarshalJSON` produz chaves `street`, `number`, `district`, `city`, `state`, `country`, `zipCode`
+
+#### 5. `location_test.go`
+Validação numérica com limites.
+
+Funções expostas: `NewLocation`, `IsValid`, `Lat`, `Lon`, `MarshalJSON`. Erro: `ErrInvalidLocation`.
+
+Casos:
+- `IsValid()` com lat/lon nos limites: `-90/90`, `-180/180` → `true`
+- lat fora do range: `91`, `-91` → `false`
+- lon fora do range: `181`, `-181` → `false`
+- `NewLocation(0, 0)` → sucesso, getters retornam 0
+- `NewLocation(91, 0)` → erro `ErrInvalidLocation`
+- `MarshalJSON` produz `{"lat":...,"lon":...}`
+
+**Dica:** ótimo para o primeiro **table-driven test** idiomático.
+
+#### 6. `slug_test.go` (o mais rico)
+Tem regex, normalização Unicode, remoção de acentos.
+
+Funções expostas: `NewSlug`, `GenerateSlugFromName`, `String`, `MarshalJSON`. Erro: `ErrInvalidSlugFormat`.
+
+Casos para `NewSlug`:
+- vazio / só espaços → erro
+- com maiúsculas → erro (`"Foo"`)
+- com underscore → erro (`"foo_bar"`)
+- com caractere especial → erro (`"café!"`)
+- válido simples → sucesso
+- válido com hífen no meio → sucesso
+- com espaços nas pontas → sucesso e trimmed
+
+Casos para `GenerateSlugFromName`:
+- `"Restaurante Bom"` → `"restaurante-bom"`
+- `"Café Açaí"` → `"cafe-acai"` (testa remoção de acentos via `unicode.Mn`)
+- `"  Pizza  "` → `"pizza"` (trim)
+- `"Loja 123"` → `"loja-123"`
+- `"!!!@#"` → `""` (vazio quando não sobra nada)
+- `" "` → `""`
+
+**`removeAccents`** (não-exportada): testada indiretamente via `GenerateSlugFromName`.
+
+`String()` e `MarshalJSON`:
+- `Slug("ola").String()` → `"ola"`
+- `MarshalJSON` de um slug válido produz `"ola"` (string JSON com aspas)
+
+---
+
+## Anti-armadilhas
+
+- **Não confunda `assert.Equal` com `assert.Same`** — o primeiro compara valores, o segundo compara ponteiros.
+- **`assert.ErrorIs`** é o certo para erros sentinela (`ErrInvalidSlugFormat`, etc), não `assert.EqualError` (esse compara a mensagem).
+- **`MarshalJSON` retorna `[]byte`** — compare com `[]byte("\"valor\"")` ou use `assert.JSONEq` para estrutura JSON.
+- Os campos dos value objects são **não-exportados**. `package domain_test` força o uso da API pública — bom para detectar bugs.
+- `GenerateSlugFromName` pode terminar vazio **sem erro** (não retorna erro). Comportamento documentado pelo teste.
+
+---
+
+## Checklist de execução da rodada Nível 1
+
+1. Adicionar testify: `go get github.com/stretchr/testify`
+2. Criar `internal/core/domain/establishment_id_test.go` e rodar:
+   `go test ./internal/core/domain/ -v -run TestParseEstablishmentID`
+3. Criar `establishment_type_test.go`, rodar testes dele
+4. Criar `phone_test.go`, rodar
+5. Criar `address_test.go`, rodar
+6. Criar `location_test.go` (aqui entra table-driven), rodar
+7. Criar `slug_test.go` (o mais denso), rodar
+8. Rodar tudo junto: `go test ./internal/core/domain/ -v` — esperar todos verdes
+9. Rodar `go test ./...` no projeto inteiro — nada deve quebrar
+
+A cada teste o usuário pode chamar pedindo revisão/explicação sem receber a resposta pronta.
+
+---
+
+## Comandos úteis
+
+```bash
+# Rodar testes com verbose
+go test ./internal/core/domain/ -v
+
+# Rodar só um teste específico
+go test ./internal/core/domain/ -v -run TestParseEstablishmentID
+
+# Rodar tudo no projeto
+go test ./...
+
+# Formatar após editar
+gofmt -w .
+```
+
+---
+
+## Estado atual da sessão
+
+- [x] Projeto explorado completamente
+- [x] Plano de aprendizado definido
+- [x] Decisões acordadas com o usuário
+- [x] Este arquivo `.session` salvo
+- [x] testify adicionado ao `go.mod`
+- [x] `establishment_id_test.go` escrito (exemplo didático com comentários densos)
+- [x] `/todo.md` criado na raiz (playbook consolidado)
+- [ ] `establishment_type_test.go` escrito
+- [ ] `phone_test.go` escrito
+- [ ] `address_test.go` escrito
+- [ ] `location_test.go` escrito
+- [ ] `slug_test.go` escrito
+- [ ] Todos os testes do Nível 1 verdes
+- [ ] `go test ./...` verde no projeto inteiro
+
+---
+
+## Próximos passos ao retomar a sessão
+
+1. Abrir `/todo.md` (raiz) — playbook completo de testes.
+2. Este `.session` é só resumo; o playbook detalhado está em `todo.md`.
+3. Confirmar o estado atual dos checkboxes acima.
+4. Continuar de onde parou (provavelmente `establishment_type_test.go`).
+5. Quando o Nível 1 terminar, decidir se avança para Nível 2 ou para.
